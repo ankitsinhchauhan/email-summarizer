@@ -11,9 +11,13 @@ def summarize_text(
     if len(cleaned_text) < 100:
         return "Text is too short to summarize."
 
+<<<<<<< HEAD
     # Split at most 3 times to find the first 3 sentences without allocating
     # hundreds of thousands of sentence strings for large documents.
     sentences = cleaned_text.split(". ", 3)
+=======
+    sentences = cleaned_text.split(". ")
+>>>>>>> origin/main
 
     if len(sentences) <= 3:
         return cleaned_text

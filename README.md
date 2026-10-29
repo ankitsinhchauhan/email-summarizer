@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Email Summarizer
 
 Email Summarizer is a responsive web application that summarizes long emails, articles, and text documents into concise summaries.
@@ -56,12 +57,61 @@ email-summarizer/
 │   └── style.css        # Stylesheet with light/dark theme variables
 ├── requirements.txt     # Python dependency lockfile
 ├── pytest.ini           # Pytest configuration
+=======
+# Smart Email Summarizer
+
+Smart Email Summarizer is a simple AI-based web application that summarizes long emails, articles, and text documents into short and meaningful summaries.
+
+This project is developed using FastAPI, Python, HTML, CSS, and JavaScript.
+
+---
+
+# Features
+
+- Text summarization
+- File upload summarization (.txt)
+- Dark and Light mode
+- Responsive UI
+- FastAPI backend
+- AI summarization using BART model
+
+---
+
+# Technologies Used
+
+## Frontend
+
+- HTML
+- CSS
+- JavaScript
+
+## Backend
+
+- Python
+- FastAPI
+- Transformers
+- Torch
+
+---
+
+# Project Structure
+
+```text
+smart-email-summarizer/
+├── src/
+├── tests/
+├── scripts/
+├── ui/
+├── requirements.txt
+├── pytest.ini
+>>>>>>> origin/main
 ├── .gitignore
 └── README.md
 ```
 
 ---
 
+<<<<<<< HEAD
 ## Supported Input & Limitations
 
 | Input Type | Supported Formats | Maximum Size | Processing Notes |
@@ -96,12 +146,35 @@ source venv/Scripts/activate  # on Windows Git Bash
 *(If creating a fresh virtual environment: `py -3.12 -m venv venv`)*
 
 ### 3. Install Dependencies
+=======
+# Installation
+
+## Create Virtual Environment
+
+```bash
+py -3.11 -m venv venv
+```
+
+---
+
+## Activate Virtual Environment
+
+```bash
+venv\Scripts\activate
+```
+
+---
+
+## Install Dependencies
+
+>>>>>>> origin/main
 ```bash
 pip install -r requirements.txt
 ```
 
 ---
 
+<<<<<<< HEAD
 ## Running Locally
 
 ### 1. Start the FastAPI Backend
@@ -116,10 +189,30 @@ In a separate terminal:
 python -m http.server 5500 --directory ui
 ```
 Open your browser and navigate to:
+=======
+# Run Backend
+
+```bash
+uvicorn src.api:app --reload
+```
+
+---
+
+# Run Frontend
+
+```bash
+cd ui
+python -m http.server 5500
+```
+
+Open:
+
+>>>>>>> origin/main
 ```text
 http://127.0.0.1:5500
 ```
 
+<<<<<<< HEAD
 > **API Resolution:** The frontend automatically detects local hostnames (`localhost` or `127.0.0.1`) and routes requests to `http://127.0.0.1:8000`. When hosted in production, it routes requests to the deployed Render backend URL.
 
 ---
@@ -141,3 +234,51 @@ All unit and integration tests run in under 2 seconds without requiring external
   - Hosts the static `ui/` bundle with instant CDN distribution.
 - **Backend (Render):** [https://email-summarizer-1.onrender.com](https://email-summarizer-1.onrender.com)
   - Runs the FastAPI application with automatic CORS headers for cross-origin requests.
+=======
+---
+
+# Run Tests
+
+```bash
+pytest
+```
+
+---
+
+# Supported File Type
+
+- .txt
+
+---
+
+# Live Deployment
+
+Poject URL: https://smart-email-summarizer-pi.vercel.app/
+
+## Frontend (Vercel)
+
+Frontend is deployed on Vercel for fast and responsive UI hosting.
+
+---
+
+## Backend (Render)
+
+FastAPI backend is deployed on Render.
+
+---
+
+# Deployment Platforms
+
+- Vercel (Frontend Hosting)
+- Render (Backend Hosting)
+
+---
+
+# Deployment Notes
+
+- Frontend and backend are deployed separately
+- CORS middleware is enabled for frontend-backend communication
+- Backend APIs are connected using fetch requests
+
+---
+>>>>>>> origin/main

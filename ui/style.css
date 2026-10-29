@@ -189,6 +189,7 @@ body {
   color: var(--muted);
 }
 
+<<<<<<< HEAD
 .file-info-row {
   display: flex;
   align-items: center;
@@ -229,6 +230,8 @@ body {
   transform: translateY(-1px);
 }
 
+=======
+>>>>>>> origin/main
 .tabs {
   display: flex;
   gap: 10px;
@@ -345,12 +348,15 @@ input:focus {
   font-size: 14px;
 }
 
+<<<<<<< HEAD
 .file-help {
   margin-top: 8px;
   color: var(--muted);
   font-size: 13px;
 }
 
+=======
+>>>>>>> origin/main
 .error {
   color: var(--danger);
   margin-top: 10px;
@@ -358,10 +364,13 @@ input:focus {
   min-height: 18px;
 }
 
+<<<<<<< HEAD
 .error.success {
   color: var(--accent);
 }
 
+=======
+>>>>>>> origin/main
 .hidden {
   display: none;
 }

@@ -19,6 +19,7 @@ def test_summarize_short_text():
 
     summary = summarize_text(text)
 
+<<<<<<< HEAD
     assert summary == "Text is too short to summarize."
 
 
@@ -41,3 +42,6 @@ def test_summarize_exactly_three_sentences():
     text = "Sentence one is clear and informative. Sentence two provides essential technical context. Sentence three concludes the main point cleanly."
     summary = summarize_text(text)
     assert summary == text
+=======
+    assert summary == "Text is too short to summarize."
+>>>>>>> origin/main

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import time
 import anyio
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, status
@@ -16,6 +17,12 @@ from src.pdf_handler import (
     extract_pdf_text,
     summarize_pdf_text,
 )
+=======
+from fastapi import FastAPI, UploadFile, File, Form
+from pydantic import BaseModel
+from src.summarizer import summarize_text
+from fastapi.middleware.cors import CORSMiddleware
+>>>>>>> origin/main
 
 app = FastAPI(title="Smart Email Summarizer")
 
@@ -26,6 +33,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+<<<<<<< HEAD
 
 
 def validate_summary_lengths(min_length: int, max_length: int) -> None:
@@ -52,11 +60,18 @@ class SummaryRequest(BaseModel):
     max_length: int = Field(default=150, ge=50, le=300)
     min_length: int = Field(default=30, ge=10, le=150)
 
+=======
+class SummaryRequest(BaseModel):
+    text: str
+    max_length: int = 150
+    min_length: int = 30
+>>>>>>> origin/main
 
 @app.get("/")
 def home():
     return {"message": "Smart Email Summarizer Running"}
 
+<<<<<<< HEAD
 
 @app.post("/summarize")
 def summarize(request: SummaryRequest):
@@ -233,5 +248,34 @@ async def summarize_pdf(
     return {
         "filename": filename,
         "summary": summary,
+=======
+@app.post("/summarize")
+def summarize(request: SummaryRequest):
+    summary = summarize_text(
+        request.text,
+        request.max_length,
+        request.min_length
+    )
+
+    return {
+        "original_length": len(request.text),
+        "summary": summary
+    }
+
+@app.post("/summarize-file")
+async def summarize_file(
+    file: UploadFile = File(...),
+    max_length: int = Form(130),
+    min_length: int = Form(30)
+):
+    content = await file.read()
+    text = content.decode("utf-8", errors="ignore")
+
+    summary = summarize_text(text, max_length, min_length)
+
+    return {
+        "filename": file.filename,
+        "summary": summary
+>>>>>>> origin/main
     }
 

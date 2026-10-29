@@ -1,5 +1,9 @@
 venv/
 __pycache__/
 *.pyc
+<<<<<<< HEAD
 .env
 .pytest_cache/
+=======
+.env
+>>>>>>> origin/main
