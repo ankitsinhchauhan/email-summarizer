@@ -1,6 +1,6 @@
-# Smart Email Summarizer
+# Email Summarizer
 
-Smart Email Summarizer is a responsive web application that summarizes long emails, articles, and text documents into concise summaries.
+Email Summarizer is a responsive web application that summarizes long emails, articles, and text documents into concise summaries.
 
 The project features a FastAPI backend and a vanilla HTML5, CSS3, and JavaScript frontend with dark and light theme support.
 
@@ -137,7 +137,7 @@ All unit and integration tests run in under 2 seconds without requiring external
 
 ## Live Deployment
 
-- **Frontend (Vercel):** [https://smart-email-summarizer-pi.vercel.app/](https://smart-email-summarizer-pi.vercel.app/)
+- **Frontend (Vercel):** [https://email-summarizer-pi.vercel.app/](https://email-summarizer-pi.vercel.app/)
   - Hosts the static `ui/` bundle with instant CDN distribution.
-- **Backend (Render):** [https://smart-email-summarizer-1.onrender.com](https://smart-email-summarizer-1.onrender.com)
+- **Backend (Render):** [https://email-summarizer-1.onrender.com](https://email-summarizer-1.onrender.com)
   - Runs the FastAPI application with automatic CORS headers for cross-origin requests.
