@@ -1,34 +1,13 @@
-// DOM Elements
-const textTab = document.getElementById("textTab");
-const txtTab = document.getElementById("txtTab");
-const pdfTab = document.getElementById("pdfTab");
+// ==========================================================================
+// SMART EMAIL SUMMARIZER — PRODUCTION CLIENT CONTROLLER
+// Handles API requests, real XHR upload tracking, modal workflows,
+// drag-and-drop, theme persistence, and accessible UI interactions.
+// ==========================================================================
 
-const textPanel = document.getElementById("textPanel");
-const txtPanel = document.getElementById("txtPanel");
-const pdfPanel = document.getElementById("pdfPanel");
+// --------------------------------------------------------------------------
+// 1. Environment-Aware Configuration
+// --------------------------------------------------------------------------
 
-const inputText = document.getElementById("inputText");
-const charCount = document.getElementById("charCount");
-
-const txtFileInput = document.getElementById("txtFileInput");
-const txtFileInfo = document.getElementById("txtFileInfo");
-const txtRemoveBtn = document.getElementById("txtRemoveBtn");
-
-const pdfFileInput = document.getElementById("pdfFileInput");
-const pdfFileInfo = document.getElementById("pdfFileInfo");
-const pdfRemoveBtn = document.getElementById("pdfRemoveBtn");
-
-const maxLengthInput = document.getElementById("maxLength");
-const minLengthInput = document.getElementById("minLength");
-
-const summarizeBtn = document.getElementById("summarizeBtn");
-const spinner = document.getElementById("spinner");
-const summaryBox = document.getElementById("summaryBox");
-const summaryResult = document.getElementById("summaryResult");
-const errorMessage = document.getElementById("errorMessage");
-const themeToggle = document.getElementById("themeToggle");
-
-// Environment-aware API Base URL
 const isLocalhost =
   window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1" ||
@@ -40,171 +19,483 @@ const API_BASE_URL = isLocalhost
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-// Tab Mode: "text" | "txt" | "pdf"
-let activeMode = localStorage.getItem("activeMode") || "text";
-if (!["text", "txt", "pdf"].includes(activeMode)) {
-  activeMode = "text";
+// --------------------------------------------------------------------------
+// 2. DOM Elements Selection
+// --------------------------------------------------------------------------
+
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => document.querySelectorAll(selector);
+
+// Header & Theme
+const themeToggle = $("#themeToggle");
+
+// Tabs & Panels
+const tabs = $$(".tab");
+const textTab = $("#textTab");
+const txtTab = $("#txtTab");
+const pdfTab = $("#pdfTab");
+const panelText = $("#panel-text");
+const panelTxt = $("#panel-txt");
+const panelPdf = $("#panel-pdf");
+
+// Direct Text Input
+const inputText = $("#inputText");
+const charCount = $("#charCount");
+
+// Length Budget Controls
+const minLengthInput = $("#minLength");
+const maxLengthInput = $("#maxLength");
+const summarizeBtn = $("#summarizeBtn");
+const errorMessage = $("#errorMessage");
+
+// Upload Progress
+const uploadProgressBox = $("#uploadProgressBox");
+const progressStatus = $("#progressStatus");
+const progressPercent = $("#progressPercent");
+const progressBar = $("#progressBar");
+
+// Result Card & Stats
+const emptyState = $("#emptyState");
+const resultCard = $("#resultCard");
+const resultStatus = $("#resultStatus");
+const summaryResult = $("#summaryResult");
+const copySummaryBtn = $("#copySummaryBtn");
+const originalStat = $("#original");
+const summarizedStat = $("#summarized");
+const reductionStat = $("#reduction");
+
+// Modal Dialog Elements
+const uploadModalOverlay = $("#uploadModalOverlay");
+const modalTitle = $("#modalTitle");
+const modalDesc = $("#modalDesc");
+const modalCloseBtn = $("#modalCloseBtn");
+const modalCancelBtn = $("#modalCancelBtn");
+const modalUseBtn = $("#modalUseBtn");
+const modalBrowseBtn = $("#modalBrowseBtn");
+const modalClearBtn = $("#modalClearBtn");
+const modalDropzone = $("#modalDropzone");
+const modalChip = $("#modalChip");
+const modalExt = $("#modalExt");
+const modalName = $("#modalName");
+const modalSize = $("#modalSize");
+const filePicker = $("#filePicker");
+
+// Toast Container
+const toastNotification = $("#toastNotification");
+
+// --------------------------------------------------------------------------
+// 3. Application State
+// --------------------------------------------------------------------------
+
+let currentTab = localStorage.getItem("activeMode") || "text";
+if (!["text", "txt", "pdf"].includes(currentTab)) {
+  currentTab = "text";
 }
 
-setActiveMode(activeMode);
-loadSavedTheme();
+let modalKind = "txt"; // "txt" | "pdf"
+let modalCandidate = null;
 
-// Event Listeners: Input & Theme
-inputText.addEventListener("input", () => {
-  charCount.innerText = `${inputText.value.length} characters`;
-  clearMessage();
+const attachedFiles = {
+  txt: null,
+  pdf: null,
+};
+
+// --------------------------------------------------------------------------
+// 4. Initialization
+// --------------------------------------------------------------------------
+
+document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
+  switchTab(currentTab);
+  initInputListeners();
+  initModalHandlers();
+  initPanelDropzones();
 });
 
-themeToggle.addEventListener("click", () => {
-  const html = document.documentElement;
-  const currentTheme = html.getAttribute("data-theme");
+// Immediately initialize theme and active tab for instant render
+initTheme();
+switchTab(currentTab);
 
-  if (currentTheme === "dark") {
-    html.setAttribute("data-theme", "light");
-    themeToggle.innerText = "☀️ Light Mode";
-    localStorage.setItem("theme", "light");
-  } else {
-    html.setAttribute("data-theme", "dark");
-    themeToggle.innerText = "🌙 Dark Mode";
-    localStorage.setItem("theme", "dark");
-  }
-});
+// --------------------------------------------------------------------------
+// 5. Theme Management & Persistence
+// --------------------------------------------------------------------------
 
-// Event Listeners: Tabs
-textTab.addEventListener("click", () => setActiveMode("text"));
-txtTab.addEventListener("click", () => setActiveMode("txt"));
-pdfTab.addEventListener("click", () => setActiveMode("pdf"));
-
-// Event Listeners: TXT File Input & Remove
-txtFileInput.addEventListener("change", () => {
-  clearMessage();
-  if (txtFileInput.files && txtFileInput.files.length > 0) {
-    const file = txtFileInput.files[0];
-    if (!file.name.toLowerCase().endsWith(".txt")) {
-      showError("Please select a valid plain text (.txt) file.");
-      txtFileInput.value = "";
-      txtFileInfo.innerText = "No file selected";
-      txtRemoveBtn.classList.add("hidden");
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      showError("File is too large. Maximum allowed size is 10 MB.");
-      txtFileInput.value = "";
-      txtFileInfo.innerText = "No file selected";
-      txtRemoveBtn.classList.add("hidden");
-      return;
-    }
-    txtFileInfo.innerText = `📄 ${file.name} (${formatFileSize(file.size)})`;
-    txtRemoveBtn.classList.remove("hidden");
-  } else {
-    txtFileInfo.innerText = "No file selected";
-    txtRemoveBtn.classList.add("hidden");
-  }
-});
-
-txtRemoveBtn.addEventListener("click", () => {
-  txtFileInput.value = "";
-  txtFileInfo.innerText = "No file selected";
-  txtRemoveBtn.classList.add("hidden");
-  clearMessage();
-});
-
-// Event Listeners: PDF File Input & Remove
-pdfFileInput.addEventListener("change", () => {
-  clearMessage();
-  if (pdfFileInput.files && pdfFileInput.files.length > 0) {
-    const file = pdfFileInput.files[0];
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      showError("Please select a valid PDF (.pdf) file.");
-      pdfFileInput.value = "";
-      pdfFileInfo.innerText = "No file selected";
-      pdfRemoveBtn.classList.add("hidden");
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      showError("PDF file is too large. Maximum allowed size is 10 MB.");
-      pdfFileInput.value = "";
-      pdfFileInfo.innerText = "No file selected";
-      pdfRemoveBtn.classList.add("hidden");
-      return;
-    }
-    pdfFileInfo.innerText = `📕 ${file.name} (${formatFileSize(file.size)})`;
-    pdfRemoveBtn.classList.remove("hidden");
-  } else {
-    pdfFileInfo.innerText = "No file selected";
-    pdfRemoveBtn.classList.add("hidden");
-  }
-});
-
-pdfRemoveBtn.addEventListener("click", () => {
-  pdfFileInput.value = "";
-  pdfFileInfo.innerText = "No file selected";
-  pdfRemoveBtn.classList.add("hidden");
-  clearMessage();
-});
-
-// Event Listener: Summarize Action
-summarizeBtn.addEventListener("click", async () => {
-  if (activeMode === "text") {
-    await summarizeText();
-  } else if (activeMode === "txt") {
-    await summarizeTxtFile();
-  } else if (activeMode === "pdf") {
-    await summarizePdfFile();
-  }
-});
-
-function setActiveMode(mode) {
-  activeMode = mode;
-  localStorage.setItem("activeMode", mode);
-
-  // Reset tab active states & ARIA
-  [textTab, txtTab, pdfTab].forEach((tab) => {
-    tab.classList.remove("active");
-    tab.setAttribute("aria-selected", "false");
-  });
-  [textPanel, txtPanel, pdfPanel].forEach((panel) => panel.classList.add("hidden"));
-
-  if (mode === "text") {
-    textTab.classList.add("active");
-    textTab.setAttribute("aria-selected", "true");
-    textPanel.classList.remove("hidden");
-  } else if (mode === "txt") {
-    txtTab.classList.add("active");
-    txtTab.setAttribute("aria-selected", "true");
-    txtPanel.classList.remove("hidden");
-  } else if (mode === "pdf") {
-    pdfTab.classList.add("active");
-    pdfTab.setAttribute("aria-selected", "true");
-    pdfPanel.classList.remove("hidden");
-  }
-
-  clearMessage();
-}
-
-function loadSavedTheme() {
+function initTheme() {
   const savedTheme = localStorage.getItem("theme") || "dark";
-  const html = document.documentElement;
+  applyTheme(savedTheme);
+}
 
-  html.setAttribute("data-theme", savedTheme);
+function applyTheme(theme) {
+  const isDark = theme === "dark";
+  document.body.classList.toggle("dark", isDark);
+  document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+  if (themeToggle) {
+    themeToggle.textContent = isDark ? "☀" : "☾";
+  }
+  localStorage.setItem("theme", isDark ? "dark" : "light");
+}
 
-  if (savedTheme === "light") {
-    themeToggle.innerText = "☀️ Light Mode";
-  } else {
-    themeToggle.innerText = "🌙 Dark Mode";
+if (themeToggle) {
+  themeToggle.addEventListener("click", () => {
+    const isDark = document.body.classList.contains("dark");
+    applyTheme(isDark ? "light" : "dark");
+  });
+}
+
+// --------------------------------------------------------------------------
+// 6. Mode Tabs Switching
+// --------------------------------------------------------------------------
+
+function switchTab(targetTab) {
+  currentTab = targetTab;
+  localStorage.setItem("activeMode", targetTab);
+
+  tabs.forEach((tabBtn) => {
+    const isActive = tabBtn.dataset.tab === targetTab;
+    tabBtn.classList.toggle("active", isActive);
+    tabBtn.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+
+  const panels = [
+    { name: "text", el: panelText },
+    { name: "txt", el: panelTxt },
+    { name: "pdf", el: panelPdf },
+  ];
+
+  panels.forEach(({ name, el }) => {
+    if (el) {
+      el.classList.toggle("active", name === targetTab);
+    }
+  });
+
+  clearError();
+}
+
+tabs.forEach((tabBtn) => {
+  tabBtn.addEventListener("click", () => {
+    switchTab(tabBtn.dataset.tab);
+  });
+});
+
+// --------------------------------------------------------------------------
+// 7. Input Handlers & Validation
+// --------------------------------------------------------------------------
+
+function initInputListeners() {
+  if (inputText) {
+    inputText.addEventListener("input", (e) => {
+      const len = e.target.value.length;
+      if (charCount) {
+        charCount.textContent = `${len.toLocaleString()} characters`;
+      }
+      clearError();
+    });
+  }
+
+  if (minLengthInput) {
+    minLengthInput.addEventListener("input", clearError);
+  }
+  if (maxLengthInput) {
+    maxLengthInput.addEventListener("input", clearError);
   }
 }
 
-// Text Summarization
-async function summarizeText() {
-  const text = inputText.value.trim();
-  const maxLength = getMaxLength();
-  const minLength = getMinLength();
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(2)} MB`;
+}
 
-  if (!validateLengths(minLength, maxLength)) return;
+function getLengths() {
+  const minVal = parseInt(minLengthInput ? minLengthInput.value : "30", 10);
+  const maxVal = parseInt(maxLengthInput ? maxLengthInput.value : "150", 10);
+  return { minVal, maxVal };
+}
+
+function validateLengths(minVal, maxVal) {
+  clearError();
+
+  if (Number.isNaN(minVal) || Number.isNaN(maxVal)) {
+    showError("Please enter valid numeric values for min and max words.");
+    return false;
+  }
+
+  if (minVal < 10 || minVal > 150) {
+    showError("Min length must be between 10 and 150 words.");
+    return false;
+  }
+
+  if (maxVal < 50 || maxVal > 300) {
+    showError("Max length must be between 50 and 300 words.");
+    return false;
+  }
+
+  if (minVal >= maxVal) {
+    showError("Min length must be smaller than max length.");
+    return false;
+  }
+
+  return true;
+}
+
+// --------------------------------------------------------------------------
+// 8. Reusable Upload Modal & Drag-and-Drop
+// --------------------------------------------------------------------------
+
+function openUploadModal(type) {
+  modalKind = type;
+  modalCandidate = attachedFiles[type];
+
+  if (modalTitle) {
+    modalTitle.textContent = type === "pdf" ? "Upload a PDF document" : "Upload a TXT file";
+  }
+  if (modalDesc) {
+    modalDesc.textContent =
+      (type === "pdf" ? "Text-based PDFs only" : "Plain text files (.txt)") +
+      " &middot; Maximum file size 10 MB";
+  }
+  if (filePicker) {
+    filePicker.accept = type === "pdf" ? ".pdf,application/pdf" : ".txt,text/plain";
+    filePicker.value = ""; // Reset so same file can be selected again
+  }
+
+  renderModalCandidate();
+
+  if (uploadModalOverlay) {
+    uploadModalOverlay.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+}
+
+function closeUploadModal() {
+  modalCandidate = null;
+  if (uploadModalOverlay) {
+    uploadModalOverlay.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+}
+
+function acceptFileCandidate(file) {
+  if (!file) return;
+
+  const expectedExt = modalKind === "pdf" ? ".pdf" : ".txt";
+  if (!file.name.toLowerCase().endsWith(expectedExt)) {
+    notifyToast(`Please choose a ${expectedExt} file.`);
+    return;
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    notifyToast("File is larger than 10 MB limit.");
+    return;
+  }
+
+  modalCandidate = file;
+  renderModalCandidate();
+}
+
+function renderModalCandidate() {
+  if (!modalChip || !modalUseBtn) return;
+
+  const hasCandidate = !!modalCandidate;
+  modalChip.classList.toggle("show", hasCandidate);
+  modalUseBtn.disabled = !hasCandidate;
+
+  if (hasCandidate) {
+    if (modalExt) modalExt.textContent = modalKind.toUpperCase();
+    if (modalName) modalName.textContent = modalCandidate.name;
+    if (modalSize) modalSize.textContent = formatBytes(modalCandidate.size);
+  }
+}
+
+function attachFileToPanel(kind, file) {
+  attachedFiles[kind] = file;
+  const chip = $(`#chip-${kind}`);
+  const nameEl = $(`#name-${kind}`);
+  const sizeEl = $(`#size-${kind}`);
+
+  if (chip && nameEl && sizeEl) {
+    nameEl.textContent = file.name;
+    sizeEl.textContent = formatBytes(file.size);
+    chip.classList.add("show");
+  }
+
+  clearError();
+}
+
+function removeAttachedFile(kind) {
+  attachedFiles[kind] = null;
+  const chip = $(`#chip-${kind}`);
+  if (chip) {
+    chip.classList.remove("show");
+  }
+  if (filePicker) {
+    filePicker.value = "";
+  }
+  clearError();
+  notifyToast("File removed");
+}
+
+function initModalHandlers() {
+  // Open modal buttons
+  $$("[data-open]").forEach((btn) => {
+    btn.addEventListener("click", () => openUploadModal(btn.dataset.open));
+  });
+
+  // Close modal buttons
+  if (modalCloseBtn) modalCloseBtn.addEventListener("click", closeUploadModal);
+  if (modalCancelBtn) modalCancelBtn.addEventListener("click", closeUploadModal);
+
+  // Overlay click dismiss
+  if (uploadModalOverlay) {
+    uploadModalOverlay.addEventListener("click", (e) => {
+      if (e.target === uploadModalOverlay) {
+        closeUploadModal();
+      }
+    });
+  }
+
+  // Escape key dismiss
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && uploadModalOverlay && uploadModalOverlay.classList.contains("open")) {
+      closeUploadModal();
+    }
+  });
+
+  // Browse files
+  if (modalBrowseBtn && filePicker) {
+    modalBrowseBtn.addEventListener("click", () => filePicker.click());
+  }
+
+  if (filePicker) {
+    filePicker.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        acceptFileCandidate(e.target.files[0]);
+      }
+    });
+  }
+
+  // Modal clear candidate
+  if (modalClearBtn) {
+    modalClearBtn.addEventListener("click", () => {
+      modalCandidate = null;
+      if (filePicker) filePicker.value = "";
+      renderModalCandidate();
+    });
+  }
+
+  // Modal confirm use file
+  if (modalUseBtn) {
+    modalUseBtn.addEventListener("click", () => {
+      if (!modalCandidate) return;
+      attachFileToPanel(modalKind, modalCandidate);
+      closeUploadModal();
+      notifyToast("File added successfully");
+    });
+  }
+
+  // Modal dropzone drag & drop
+  if (modalDropzone) {
+    ["dragenter", "dragover"].forEach((evt) => {
+      modalDropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        modalDropzone.classList.add("drag");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((evt) => {
+      modalDropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        modalDropzone.classList.remove("drag");
+      });
+    });
+
+    modalDropzone.addEventListener("drop", (e) => {
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        acceptFileCandidate(e.dataTransfer.files[0]);
+      }
+    });
+  }
+
+  // Remove buttons on panel chips
+  $$("[data-remove]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      removeAttachedFile(btn.dataset.remove);
+    });
+  });
+}
+
+// Panel dropzones (direct drag & drop onto .upload buttons)
+function initPanelDropzones() {
+  $$(".upload").forEach((uploadBox) => {
+    const kind = uploadBox.dataset.open;
+
+    ["dragenter", "dragover"].forEach((evt) => {
+      uploadBox.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadBox.classList.add("drag");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((evt) => {
+      uploadBox.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadBox.classList.remove("drag");
+      });
+    });
+
+    uploadBox.addEventListener("drop", (e) => {
+      const files = e.dataTransfer ? e.dataTransfer.files : null;
+      if (files && files.length > 0) {
+        const file = files[0];
+        const expectedExt = kind === "pdf" ? ".pdf" : ".txt";
+
+        if (!file.name.toLowerCase().endsWith(expectedExt)) {
+          notifyToast(`Please drop a valid ${expectedExt} file.`);
+          return;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+          notifyToast("File exceeds 10 MB limit.");
+          return;
+        }
+
+        attachFileToPanel(kind, file);
+        notifyToast("File added successfully");
+      }
+    });
+  });
+}
+
+// --------------------------------------------------------------------------
+// 9. Summarization Dispatcher
+// --------------------------------------------------------------------------
+
+if (summarizeBtn) {
+  summarizeBtn.addEventListener("click", async () => {
+    if (currentTab === "text") {
+      await summarizeTextInput();
+    } else if (currentTab === "txt") {
+      await summarizeTxtInput();
+    } else if (currentTab === "pdf") {
+      await summarizePdfInput();
+    }
+  });
+}
+
+// Direct Text Summarization
+async function summarizeTextInput() {
+  const text = inputText ? inputText.value.trim() : "";
+  const { minVal, maxVal } = getLengths();
+
+  if (!validateLengths(minVal, maxVal)) return;
 
   if (text.length < 200) {
     showError("Please enter at least 200 characters.");
+    notifyToast("Please enter at least 200 characters.");
     return;
   }
 
@@ -218,200 +509,316 @@ async function summarizeText() {
       },
       body: JSON.stringify({
         text: text,
-        max_length: maxLength,
-        min_length: minLength,
+        max_length: maxVal,
+        min_length: minVal,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(await getResponseError(response));
+      throw new Error(await extractErrorDetail(response));
     }
 
     const data = await response.json();
-    showSummary(data.summary);
-    showSuccess("Summary generated successfully.");
-  } catch (error) {
-    showError(error.message);
-    showPlaceholder("Something went wrong. Try again.");
+    renderSummaryResult(data.summary, text.length, "Direct Text");
+    notifyToast("Summary generated successfully");
+  } catch (err) {
+    showError(err.message);
+    notifyToast(err.message);
   } finally {
     stopLoading();
   }
 }
 
 // TXT File Summarization
-async function summarizeTxtFile() {
-  const file = txtFileInput.files ? txtFileInput.files[0] : null;
-  const maxLength = getMaxLength();
-  const minLength = getMinLength();
+async function summarizeTxtInput() {
+  const file = attachedFiles.txt;
+  const { minVal, maxVal } = getLengths();
 
-  if (!validateLengths(minLength, maxLength)) return;
-
-  if (!file) {
-    showError("Please select a .txt file first.");
-    return;
-  }
-
-  if (!file.name.toLowerCase().endsWith(".txt")) {
-    showError("Only plain text (.txt) files are supported.");
-    return;
-  }
-
-  if (file.size > MAX_FILE_SIZE) {
-    showError("File is too large. Maximum allowed size is 10 MB.");
-    return;
-  }
-
-  await uploadAndSummarize(file, maxLength, minLength, "/summarize-file");
-}
-
-// PDF File Summarization
-async function summarizePdfFile() {
-  const file = pdfFileInput.files ? pdfFileInput.files[0] : null;
-  const maxLength = getMaxLength();
-  const minLength = getMinLength();
-
-  if (!validateLengths(minLength, maxLength)) return;
+  if (!validateLengths(minVal, maxVal)) return;
 
   if (!file) {
-    showError("Please select a .pdf file first.");
+    showError("Please upload a .txt file first.");
+    notifyToast("Please upload a .txt file first.");
     return;
   }
 
-  if (!file.name.toLowerCase().endsWith(".pdf")) {
-    showError("Only PDF (.pdf) documents are supported.");
-    return;
+  let originalCharCount = file.size;
+  try {
+    const fileContent = await file.text();
+    originalCharCount = fileContent.length;
+  } catch {
+    originalCharCount = file.size;
   }
 
-  if (file.size > MAX_FILE_SIZE) {
-    showError("PDF file is too large. Maximum allowed size is 10 MB.");
-    return;
-  }
-
-  await uploadAndSummarize(file, maxLength, minLength, "/summarize-pdf");
+  uploadFileWithXHR(file, minVal, maxVal, "/summarize-file", originalCharCount);
 }
 
-// Generic Multipart Upload
-async function uploadAndSummarize(file, maxLength, minLength, endpoint) {
+// PDF Document Summarization
+async function summarizePdfInput() {
+  const file = attachedFiles.pdf;
+  const { minVal, maxVal } = getLengths();
+
+  if (!validateLengths(minVal, maxVal)) return;
+
+  if (!file) {
+    showError("Please upload a .pdf document first.");
+    notifyToast("Please upload a .pdf document first.");
+    return;
+  }
+
+  uploadFileWithXHR(file, minVal, maxVal, "/summarize-pdf", file.size);
+}
+
+// --------------------------------------------------------------------------
+// 10. Real Upload Progress Bar with XMLHttpRequest
+// --------------------------------------------------------------------------
+
+function uploadFileWithXHR(file, minLength, maxLength, endpoint, originalSize) {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("max_length", maxLength);
   formData.append("min_length", minLength);
 
   startLoading();
+  showProgress(0, `Uploading ${file.name}... (0%)`);
 
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: "POST",
-      body: formData,
-    });
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", `${API_BASE_URL}${endpoint}`);
 
-    if (!response.ok) {
-      throw new Error(await getResponseError(response));
+  // Track upload progress accurately
+  xhr.upload.onprogress = (event) => {
+    if (event.lengthComputable) {
+      const percent = Math.round((event.loaded / event.total) * 100);
+      if (percent < 100) {
+        showProgress(percent, `Uploading ${file.name}... (${percent}%)`);
+      } else {
+        // 100% upload reached, now waiting for server NLP processing
+        showProgress(100, "Processing summary on backend...");
+        if (progressBar) progressBar.classList.add("processing");
+      }
     }
+  };
 
-    const data = await response.json();
-    showSummary(data.summary);
-    showSuccess(`Summary of "${data.filename || file.name}" generated successfully.`);
-  } catch (error) {
-    showError(error.message);
-    showPlaceholder("Could not generate summary. Please check the error above.");
-  } finally {
+  xhr.onload = () => {
     stopLoading();
+    hideProgress();
+
+    if (xhr.status >= 200 && xhr.status < 300) {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        renderSummaryResult(data.summary, originalSize, data.filename || file.name);
+        notifyToast("Summary generated successfully");
+      } catch {
+        const msg = "Invalid JSON response from server.";
+        showError(msg);
+        notifyToast(msg);
+      }
+    } else {
+      const msg = parseXhrError(xhr);
+      showError(msg);
+      notifyToast(msg);
+    }
+  };
+
+  xhr.onerror = () => {
+    stopLoading();
+    hideProgress();
+    const msg = "Network error. Failed to reach backend.";
+    showError(msg);
+    notifyToast(msg);
+  };
+
+  xhr.send(formData);
+}
+
+function showProgress(percent, statusMsg) {
+  if (uploadProgressBox) uploadProgressBox.classList.remove("hidden");
+  if (progressBar) {
+    progressBar.style.width = `${percent}%`;
+    if (percent < 100) {
+      progressBar.classList.remove("processing");
+    }
+  }
+  if (progressPercent) progressPercent.textContent = `${percent}%`;
+  if (progressStatus) progressStatus.textContent = statusMsg;
+}
+
+function hideProgress() {
+  if (uploadProgressBox) uploadProgressBox.classList.add("hidden");
+  if (progressBar) {
+    progressBar.style.width = "0%";
+    progressBar.classList.remove("processing");
   }
 }
 
-// Error Extraction Helper
-async function getResponseError(response) {
+// --------------------------------------------------------------------------
+// 11. Error Extraction & Presentation
+// --------------------------------------------------------------------------
+
+function parseXhrError(xhr) {
+  try {
+    const data = JSON.parse(xhr.responseText);
+    if (typeof data.detail === "string") return data.detail;
+    if (Array.isArray(data.detail) && data.detail.length > 0) {
+      return data.detail[0].msg || "Server validation error.";
+    }
+    return `Server error (${xhr.status}).`;
+  } catch {
+    return `Server error (${xhr.status}).`;
+  }
+}
+
+async function extractErrorDetail(response) {
   try {
     const data = await response.json();
-    if (typeof data.detail === "string") {
-      return data.detail;
-    }
+    if (typeof data.detail === "string") return data.detail;
     if (Array.isArray(data.detail) && data.detail.length > 0) {
-      return data.detail[0].msg || "Validation error on server.";
+      return data.detail[0].msg || "Server validation error.";
     }
-    return "Server error. Please check your FastAPI backend.";
-  } catch (error) {
-    return "Server error. Could not connect to backend.";
+    return "Failed to generate summary.";
+  } catch {
+    return "Failed to connect to backend server.";
   }
 }
 
-function formatFileSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function showError(msg) {
+  if (errorMessage) {
+    errorMessage.textContent = msg;
+    errorMessage.classList.remove("hidden");
+  }
 }
 
-function getMaxLength() {
-  return parseInt(maxLengthInput.value, 10);
+function clearError() {
+  if (errorMessage) {
+    errorMessage.textContent = "";
+    errorMessage.classList.add("hidden");
+  }
 }
 
-function getMinLength() {
-  return parseInt(minLengthInput.value, 10);
-}
-
-function validateLengths(minLength, maxLength) {
-  clearMessage();
-
-  if (Number.isNaN(minLength) || Number.isNaN(maxLength)) {
-    showError("Please enter valid numeric summary lengths.");
-    return false;
-  }
-
-  if (minLength < 10 || minLength > 150) {
-    showError("Min length must be between 10 and 150.");
-    return false;
-  }
-
-  if (maxLength < 50 || maxLength > 300) {
-    showError("Max length must be between 50 and 300.");
-    return false;
-  }
-
-  if (minLength >= maxLength) {
-    showError("Min length must be smaller than max length.");
-    return false;
-  }
-
-  return true;
-}
+// --------------------------------------------------------------------------
+// 12. Result Presentation & XSS Safeguard
+// --------------------------------------------------------------------------
 
 function startLoading() {
-  summarizeBtn.disabled = true;
-  summarizeBtn.innerText = "Summarizing...";
-  spinner.classList.add("show");
-  summaryBox.classList.remove("active");
-  showPlaceholder("Analyzing document and generating summary, please wait...");
+  if (summarizeBtn) {
+    summarizeBtn.disabled = true;
+    summarizeBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Summarizing...';
+  }
+  clearError();
 }
 
 function stopLoading() {
-  summarizeBtn.disabled = false;
-  summarizeBtn.innerText = "Generate Summary";
-  spinner.classList.remove("show");
+  if (summarizeBtn) {
+    summarizeBtn.disabled = false;
+    summarizeBtn.textContent = "✨ \u00a0 Generate summary";
+  }
 }
 
-function showSummary(summary) {
-  summaryResult.className = "";
-  summaryResult.innerText = summary || "No summary received.";
-  summaryBox.classList.add("active");
+function renderSummaryResult(summary, originalCount, sourceLabel) {
+  if (!summaryResult) return;
+
+  // STRICT DOM-based XSS Prevention: innerText prevents script execution
+  summaryResult.innerText = summary || "";
+
+  if (emptyState) emptyState.style.display = "none";
+  if (resultCard) resultCard.classList.add("show");
+
+  if (resultStatus) {
+    resultStatus.textContent = sourceLabel
+      ? `●  Summary generated for ${sourceLabel}`
+      : "●  Summary generated";
+  }
+
+  // Populate Statistics
+  const orig = originalCount || summary.length;
+  const summ = summary.length;
+  const reductionPct = Math.max(0, Math.round((1 - summ / Math.max(orig, 1)) * 100));
+
+  if (originalStat) originalStat.textContent = orig.toLocaleString();
+  if (summarizedStat) summarizedStat.textContent = summ.toLocaleString();
+  if (reductionStat) reductionStat.textContent = `${reductionPct}%`;
 }
 
-function showPlaceholder(message) {
-  summaryResult.className = "muted";
-  summaryResult.innerText = message;
+// --------------------------------------------------------------------------
+// 13. Copy Summary to Clipboard
+// --------------------------------------------------------------------------
+
+if (copySummaryBtn) {
+  copySummaryBtn.addEventListener("click", async () => {
+    if (!summaryResult) return;
+    const textToCopy = summaryResult.innerText.trim();
+
+    if (!textToCopy) {
+      notifyToast("No summary to copy.");
+      return;
+    }
+
+    let success = false;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        success = true;
+      } catch {
+        success = fallbackCopy(textToCopy);
+      }
+    } else {
+      success = fallbackCopy(textToCopy);
+    }
+
+    if (success) {
+      copySummaryBtn.classList.add("copied");
+      copySummaryBtn.textContent = "Copied!";
+      notifyToast("Summary copied");
+
+      setTimeout(() => {
+        copySummaryBtn.classList.remove("copied");
+        copySummaryBtn.textContent = "Copy summary";
+      }, 2000);
+    } else {
+      notifyToast("Clipboard permission unavailable");
+    }
+  });
 }
 
-function showError(message) {
-  errorMessage.className = "error";
-  errorMessage.innerText = message;
+function fallbackCopy(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.top = "0";
+  ta.style.left = "0";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+
+  let successful = false;
+  try {
+    successful = document.execCommand("copy");
+  } catch {
+    successful = false;
+  }
+
+  document.body.removeChild(ta);
+  return successful;
 }
 
-function showSuccess(message) {
-  errorMessage.className = "error success";
-  errorMessage.innerText = message;
-}
+// --------------------------------------------------------------------------
+// 14. Toast Notification System
+// --------------------------------------------------------------------------
 
-function clearMessage() {
-  errorMessage.className = "error";
-  errorMessage.innerText = "";
+let toastTimeout = null;
+
+function notifyToast(message) {
+  if (!toastNotification) return;
+
+  toastNotification.textContent = message;
+  toastNotification.classList.add("show");
+
+  if (toastTimeout) {
+    clearTimeout(toastTimeout);
+  }
+
+  toastTimeout = setTimeout(() => {
+    toastNotification.classList.remove("show");
+  }, 2300);
 }

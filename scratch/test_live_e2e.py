@@ -228,7 +228,14 @@ def run_e2e():
                     "http://127.0.0.1:5500/",
                 ]
                 print(f"Executing headless browser via: {edge_path}")
-                browser_proc = subprocess.run(browser_cmd, capture_output=True, text=True, timeout=15)
+                browser_proc = subprocess.run(
+                    browser_cmd,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=15,
+                )
                 rendered_dom = browser_proc.stdout
                 assert "<html" in rendered_dom.lower()
                 assert "email summarizer" in rendered_dom.lower()

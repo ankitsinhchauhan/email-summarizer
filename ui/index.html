@@ -1,98 +1,217 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Smart Email Summarizer</title>
   <link rel="stylesheet" href="style.css" />
 </head>
+<body class="dark">
+  <div class="app">
+    <!-- Top Header & Brand Navigation -->
+    <header class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">✉</div>
+        <span>Smart Email Summarizer</span>
+      </div>
+      <div class="topright">
+        <span class="hint">✨ Clear the noise. Keep the meaning.</span>
+        <button class="theme" id="themeToggle" type="button" aria-label="Toggle dark and light theme" title="Toggle theme">☾</button>
+      </div>
+    </header>
 
-<body>
-  <main class="app">
+    <!-- Hero Header -->
     <section class="hero">
-      <div class="hero__top">
-        <div class="hero__badge">AI Powered Text Summary</div>
-        <button class="theme-toggle" id="themeToggle" type="button">🌙 Dark Mode</button>
-      </div>
-
-      <h1>Email Summarizer</h1>
-      <p>Paste text or upload a TXT or PDF document to generate an instant, concise summary.</p>
+      <div class="eyebrow"><i class="dot" aria-hidden="true"></i> SMARTER READING STARTS HERE</div>
+      <h1>Less reading.<br /><span class="gradient">More understanding.</span></h1>
+      <p>Turn long emails and documents into clear, concise summaries in seconds.</p>
     </section>
 
-    <section class="layout">
-      <div class="card">
-        <nav class="tabs" role="tablist" aria-label="Input mode tabs">
-          <button class="tab active" id="textTab" role="tab" type="button" aria-controls="textPanel" aria-selected="true">Text Input</button>
-          <button class="tab" id="txtTab" role="tab" type="button" aria-controls="txtPanel" aria-selected="false">TXT Upload</button>
-          <button class="tab" id="pdfTab" role="tab" type="button" aria-controls="pdfPanel" aria-selected="false">PDF Upload</button>
-        </nav>
+    <!-- Workspace Layout -->
+    <main class="workspace">
+      <!-- Input Workspace Card -->
+      <section class="card" aria-label="Input Section">
+        <div class="head">
+          <div class="title">Add your content</div>
+          <span class="step">STEP 01 / INPUT</span>
+        </div>
 
-        <!-- Panel 1: Text Input -->
-        <div id="textPanel" role="tabpanel" aria-labelledby="textTab">
-          <h2 class="card__title card__title--spaced">Email or Article Text</h2>
-          <textarea id="inputText" aria-label="Email or Article Text" placeholder="Paste your long email, report, or article here..."></textarea>
-          <div class="meta">
+        <!-- Mode Tabs -->
+        <div class="tabs" role="tablist" aria-label="Input mode tabs">
+          <button class="tab active" id="textTab" data-tab="text" role="tab" type="button" aria-selected="true" aria-controls="panel-text">
+            ✎ &nbsp;Text
+          </button>
+          <button class="tab" id="txtTab" data-tab="txt" role="tab" type="button" aria-selected="false" aria-controls="panel-txt">
+            ▤ &nbsp;TXT file
+          </button>
+          <button class="tab" id="pdfTab" data-tab="pdf" role="tab" type="button" aria-selected="false" aria-controls="panel-pdf">
+            ▧ &nbsp;PDF file
+          </button>
+        </div>
+
+        <!-- Panel 1: Direct Text Input -->
+        <div class="panel active" id="panel-text" role="tabpanel" aria-labelledby="textTab">
+          <textarea id="inputText" aria-label="Email or Article Text" placeholder="Paste your email, article, meeting notes or any long text here..."></textarea>
+          <div class="counter">
+            <span>Paste or type your content (minimum 200 characters)</span>
             <span id="charCount">0 characters</span>
-            <span>Minimum 200 characters recommended</span>
           </div>
         </div>
 
-        <!-- Panel 2: TXT Upload -->
-        <div id="txtPanel" class="hidden" role="tabpanel" aria-labelledby="txtTab">
-          <h2 class="card__title card__title--spaced">Upload Text File (.txt)</h2>
-          <div class="file-upload-box">
-            <label for="txtFileInput" class="custom-file-btn" id="txtFileBtn">Choose .TXT File</label>
-            <input type="file" id="txtFileInput" accept=".txt,text/plain" class="file-input" />
-            <div class="file-info-row" id="txtInfoRow">
-              <span class="file-info-text" id="txtFileInfo">No file selected</span>
-              <button type="button" class="file-remove-btn hidden" id="txtRemoveBtn" title="Remove selected file">✕ Remove</button>
+        <!-- Panel 2: Plain Text File (.txt) -->
+        <div class="panel" id="panel-txt" role="tabpanel" aria-labelledby="txtTab">
+          <button class="upload" id="uploadBtnTxt" type="button" data-open="txt" aria-label="Upload plain text file">
+            <span class="uploadicon" aria-hidden="true">📄</span>
+            <strong>Drop your TXT file here</strong>
+            <small>or <u>browse files</u> from your device</small>
+            <small>TXT format &middot; Up to 10 MB</small>
+          </button>
+          <div class="file" id="chip-txt">
+            <div class="fileicon">TXT</div>
+            <div class="filemeta">
+              <b id="name-txt"></b>
+              <small id="size-txt"></small>
             </div>
-            <p class="file-help">Supported format: Plain text (.txt) &middot; Maximum size: 10 MB</p>
+            <button class="remove" type="button" data-remove="txt" aria-label="Remove TXT file">&times;</button>
           </div>
         </div>
 
-        <!-- Panel 3: PDF Upload -->
-        <div id="pdfPanel" class="hidden" role="tabpanel" aria-labelledby="pdfTab">
-          <h2 class="card__title card__title--spaced">Upload PDF Document (.pdf)</h2>
-          <div class="file-upload-box">
-            <label for="pdfFileInput" class="custom-file-btn" id="pdfFileBtn">Choose .PDF File</label>
-            <input type="file" id="pdfFileInput" accept=".pdf,application/pdf" class="file-input" />
-            <div class="file-info-row" id="pdfInfoRow">
-              <span class="file-info-text" id="pdfFileInfo">No file selected</span>
-              <button type="button" class="file-remove-btn hidden" id="pdfRemoveBtn" title="Remove selected file">✕ Remove</button>
+        <!-- Panel 3: PDF Document (.pdf) -->
+        <div class="panel" id="panel-pdf" role="tabpanel" aria-labelledby="pdfTab">
+          <button class="upload" id="uploadBtnPdf" type="button" data-open="pdf" aria-label="Upload PDF document">
+            <span class="uploadicon" aria-hidden="true">📑</span>
+            <strong>Drop your PDF document here</strong>
+            <small>or <u>browse files</u> from your device</small>
+            <small>Text-based PDF &middot; Up to 10 MB</small>
+          </button>
+          <div class="file" id="chip-pdf">
+            <div class="fileicon">PDF</div>
+            <div class="filemeta">
+              <b id="name-pdf"></b>
+              <small id="size-pdf"></small>
             </div>
-            <p class="file-help">Supported format: Text-based PDF &middot; Maximum size: 10 MB &middot; Scanned/OCR not supported</p>
+            <button class="remove" type="button" data-remove="pdf" aria-label="Remove PDF file">&times;</button>
           </div>
         </div>
 
-        <!-- Length Controls -->
-        <div class="controls">
-          <div>
-            <label for="maxLength">Max Length (words)</label>
-            <input type="number" id="maxLength" value="150" min="50" max="300" />
+        <!-- Real XHR Upload Progress Bar -->
+        <div class="progress-box hidden" id="uploadProgressBox" aria-live="polite">
+          <div class="progress-head">
+            <span class="progress-status" id="progressStatus">Uploading file...</span>
+            <span class="progress-percent" id="progressPercent">0%</span>
           </div>
-
-          <div>
-            <label for="minLength">Min Length (words)</label>
-            <input type="number" id="minLength" value="30" min="10" max="150" />
+          <div class="progress-track">
+            <div class="progress-bar" id="progressBar" style="width: 0%"></div>
           </div>
         </div>
 
-        <button class="btn" id="summarizeBtn" type="button">Generate Summary</button>
-        <p class="error" id="errorMessage" role="alert"></p>
+        <!-- Summary Length Budget Controls & Submit Button -->
+        <div class="input-actions-container">
+          <div class="settings">
+            <span class="muted">Summary length</span>
+            <div class="lengths">
+              <span class="muted">Min</span>
+              <input id="minLength" type="number" value="30" min="10" max="150" aria-label="Minimum summary words" />
+              <span class="muted">Max</span>
+              <input id="maxLength" type="number" value="150" min="50" max="300" aria-label="Maximum summary words" />
+              <span class="muted">words</span>
+            </div>
+          </div>
+
+          <button class="primary" id="summarizeBtn" type="button">
+            ✨ &nbsp; Generate summary
+          </button>
+
+          <!-- Error Alert Banner -->
+          <div class="error-banner hidden" id="errorMessage" role="alert" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- Summary Result Card -->
+      <section class="card resultcard" aria-label="Summary Result Section">
+        <div class="head">
+          <div class="title">Your summary</div>
+          <span class="step">STEP 02 / RESULT</span>
+        </div>
+
+        <div class="resultbody">
+          <!-- Empty State Presentation -->
+          <div class="empty" id="emptyState">
+            <div class="art" aria-hidden="true">✧</div>
+            <h3>Your summary will appear here</h3>
+            <p>Add text or upload a document, then hit generate to see the magic happen.</p>
+          </div>
+
+          <!-- Generated Summary View -->
+          <div class="result" id="resultCard">
+            <div class="resulttop">
+              <span class="success" id="resultStatus">● &nbsp;Summary generated</span>
+              <button class="copy" id="copySummaryBtn" type="button" aria-label="Copy summary to clipboard">Copy summary</button>
+            </div>
+            <div class="resulttext" id="summaryResult"></div>
+            <div class="stats">
+              <div class="stat">
+                <b id="original">&mdash;</b>
+                <small>Original characters</small>
+              </div>
+              <div class="stat">
+                <b id="summarized">&mdash;</b>
+                <small>Summary characters</small>
+              </div>
+              <div class="stat">
+                <b id="reduction">&mdash;</b>
+                <small>Reduction</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer Note -->
+    <p class="foot">
+      <span>●</span> Your content stays yours. Processed securely via FastAPI backend.
+    </p>
+  </div>
+
+  <!-- Reusable Upload Modal Dialog -->
+  <div class="backdrop" id="uploadModalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modalhead">
+        <h2 id="modalTitle">Upload a document</h2>
+        <button class="close" id="modalCloseBtn" type="button" aria-label="Close upload dialog">&times;</button>
+      </div>
+      <p id="modalDesc">Choose a file or drag it into the upload area.</p>
+
+      <div class="dropzone" id="modalDropzone">
+        <div class="uploadicon" aria-hidden="true">☁</div>
+        <strong>Drag &amp; drop your file here</strong>
+        <small>or click below to browse your device</small>
+        <button class="secondary" id="modalBrowseBtn" type="button" style="margin-top: 14px">Browse files</button>
       </div>
 
-      <!-- Result Section -->
-      <aside class="card">
-        <h2 class="card__title">Summary</h2>
-        <div class="spinner" id="spinner" aria-label="Processing summary"></div>
-
-        <div class="summary" id="summaryBox">
-          <p id="summaryResult" class="muted">Your generated summary will appear here.</p>
+      <!-- Selected File Chip inside Modal -->
+      <div class="file modalfile" id="modalChip">
+        <div class="fileicon" id="modalExt">PDF</div>
+        <div class="filemeta">
+          <b id="modalName"></b>
+          <small id="modalSize"></small>
         </div>
-      </aside>
-    </section>
-  </main>
+        <button class="remove" id="modalClearBtn" type="button" aria-label="Remove attached file">&times;</button>
+      </div>
+
+      <!-- Hidden Native File Picker -->
+      <input type="file" id="filePicker" hidden />
+
+      <div class="modalactions">
+        <button class="secondary" id="modalCancelBtn" type="button">Cancel</button>
+        <button class="primary" id="modalUseBtn" type="button" disabled>Use this file</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Alert -->
+  <div class="toast" id="toastNotification" role="status" aria-live="polite"></div>
 
   <script src="script.js"></script>
 </body>
