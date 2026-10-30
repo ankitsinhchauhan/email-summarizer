@@ -36,7 +36,7 @@ const isLocalhost =
 
 const API_BASE_URL = isLocalhost
   ? "http://127.0.0.1:8000"
-  : "https://smart-email-summarizer-1.onrender.com";
+  : "https://email-summarizer-api-3x50.onrender.com";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
