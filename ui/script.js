@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // DOM Elements
 const textTab = document.getElementById("textTab");
 const txtTab = document.getElementById("txtTab");
@@ -51,55 +50,11 @@ setActiveMode(activeMode);
 loadSavedTheme();
 
 // Event Listeners: Input & Theme
-=======
-const inputText = document.getElementById("inputText");
-const fileInput = document.getElementById("fileInput");
-const fileInfo = document.getElementById("fileInfo");
-
-const textTab = document.getElementById("textTab");
-const fileTab = document.getElementById("fileTab");
-const textPanel = document.getElementById("textPanel");
-const filePanel = document.getElementById("filePanel");
-
-const charCount = document.getElementById("charCount");
-const summaryResult = document.getElementById("summaryResult");
-const summaryBox = document.getElementById("summaryBox");
-const errorMessage = document.getElementById("errorMessage");
-const summarizeBtn = document.getElementById("summarizeBtn");
-const spinner = document.getElementById("spinner");
-const themeToggle = document.getElementById("themeToggle");
-
-let activeMode = localStorage.getItem("activeMode") || "text";
-
-setActiveMode(activeMode);
-
->>>>>>> origin/main
 inputText.addEventListener("input", () => {
   charCount.innerText = `${inputText.value.length} characters`;
   clearMessage();
 });
 
-<<<<<<< HEAD
-=======
-fileInput.addEventListener("change", () => {
-  if (fileInput.files.length > 0) {
-    fileInfo.innerText = `Selected: ${fileInput.files[0].name}`;
-  } else {
-    fileInfo.innerText = "No file selected";
-  }
-
-  clearMessage();
-});
-
-textTab.addEventListener("click", () => {
-  setActiveMode("text");
-});
-
-fileTab.addEventListener("click", () => {
-  setActiveMode("file");
-});
-
->>>>>>> origin/main
 themeToggle.addEventListener("click", () => {
   const html = document.documentElement;
   const currentTheme = html.getAttribute("data-theme");
@@ -115,7 +70,6 @@ themeToggle.addEventListener("click", () => {
   }
 });
 
-<<<<<<< HEAD
 // Event Listeners: Tabs
 textTab.addEventListener("click", () => setActiveMode("text"));
 txtTab.addEventListener("click", () => setActiveMode("txt"));
@@ -200,22 +154,10 @@ summarizeBtn.addEventListener("click", async () => {
   }
 });
 
-// Mode Switching Helper
-=======
-summarizeBtn.addEventListener("click", () => {
-  if (activeMode === "text") {
-    summarizeText();
-  } else {
-    summarizeFile();
-  }
-});
-
->>>>>>> origin/main
 function setActiveMode(mode) {
   activeMode = mode;
   localStorage.setItem("activeMode", mode);
 
-<<<<<<< HEAD
   // Reset tab active states & ARIA
   [textTab, txtTab, pdfTab].forEach((tab) => {
     tab.classList.remove("active");
@@ -235,20 +177,6 @@ function setActiveMode(mode) {
     pdfTab.classList.add("active");
     pdfTab.setAttribute("aria-selected", "true");
     pdfPanel.classList.remove("hidden");
-=======
-  if (mode === "text") {
-    textTab.classList.add("active");
-    fileTab.classList.remove("active");
-
-    textPanel.classList.remove("hidden");
-    filePanel.classList.add("hidden");
-  } else {
-    fileTab.classList.add("active");
-    textTab.classList.remove("active");
-
-    filePanel.classList.remove("hidden");
-    textPanel.classList.add("hidden");
->>>>>>> origin/main
   }
 
   clearMessage();
@@ -267,12 +195,7 @@ function loadSavedTheme() {
   }
 }
 
-<<<<<<< HEAD
 // Text Summarization
-=======
-loadSavedTheme();
-
->>>>>>> origin/main
 async function summarizeText() {
   const text = inputText.value.trim();
   const maxLength = getMaxLength();
@@ -288,7 +211,6 @@ async function summarizeText() {
   startLoading();
 
   try {
-<<<<<<< HEAD
     const response = await fetch(`${API_BASE_URL}/summarize`, {
       method: "POST",
       headers: {
@@ -308,30 +230,6 @@ async function summarizeText() {
     const data = await response.json();
     showSummary(data.summary);
     showSuccess("Summary generated successfully.");
-=======
-    const response = await fetch(
-      "https://smart-email-summarizer-1.onrender.com/summarize",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: text,
-          max_length: maxLength,
-          min_length: minLength,
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error("Server error. Please check your FastAPI backend.");
-    }
-
-    const data = await response.json();
-
-    showSummary(data.summary);
->>>>>>> origin/main
   } catch (error) {
     showError(error.message);
     showPlaceholder("Something went wrong. Try again.");
@@ -340,30 +238,20 @@ async function summarizeText() {
   }
 }
 
-<<<<<<< HEAD
 // TXT File Summarization
 async function summarizeTxtFile() {
   const file = txtFileInput.files ? txtFileInput.files[0] : null;
-=======
-async function summarizeFile() {
-  const file = fileInput.files[0];
->>>>>>> origin/main
   const maxLength = getMaxLength();
   const minLength = getMinLength();
 
   if (!validateLengths(minLength, maxLength)) return;
 
   if (!file) {
-<<<<<<< HEAD
     showError("Please select a .txt file first.");
-=======
-    showError("Please select a .txt file.");
->>>>>>> origin/main
     return;
   }
 
   if (!file.name.toLowerCase().endsWith(".txt")) {
-<<<<<<< HEAD
     showError("Only plain text (.txt) files are supported.");
     return;
   }
@@ -404,12 +292,6 @@ async function summarizePdfFile() {
 
 // Generic Multipart Upload
 async function uploadAndSummarize(file, maxLength, minLength, endpoint) {
-=======
-    showError("Only .txt files are supported.");
-    return;
-  }
-
->>>>>>> origin/main
   const formData = new FormData();
   formData.append("file", file);
   formData.append("max_length", maxLength);
@@ -418,7 +300,6 @@ async function uploadAndSummarize(file, maxLength, minLength, endpoint) {
   startLoading();
 
   try {
-<<<<<<< HEAD
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
       body: formData,
@@ -434,32 +315,11 @@ async function uploadAndSummarize(file, maxLength, minLength, endpoint) {
   } catch (error) {
     showError(error.message);
     showPlaceholder("Could not generate summary. Please check the error above.");
-=======
-    const response = await fetch(
-      "https://smart-email-summarizer-1.onrender.com/summarize-file",
-      {
-        method: "POST",
-        body: formData,
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error("Server error. Please check your FastAPI backend.");
-    }
-
-    const data = await response.json();
-
-    showSummary(data.summary);
-  } catch (error) {
-    showError(error.message);
-    showPlaceholder("Something went wrong. Try again.");
->>>>>>> origin/main
   } finally {
     stopLoading();
   }
 }
 
-<<<<<<< HEAD
 // Error Extraction Helper
 async function getResponseError(response) {
   try {
@@ -488,21 +348,12 @@ function getMaxLength() {
 
 function getMinLength() {
   return parseInt(minLengthInput.value, 10);
-=======
-function getMaxLength() {
-  return parseInt(document.getElementById("maxLength").value);
-}
-
-function getMinLength() {
-  return parseInt(document.getElementById("minLength").value);
->>>>>>> origin/main
 }
 
 function validateLengths(minLength, maxLength) {
   clearMessage();
 
   if (Number.isNaN(minLength) || Number.isNaN(maxLength)) {
-<<<<<<< HEAD
     showError("Please enter valid numeric summary lengths.");
     return false;
   }
@@ -514,9 +365,6 @@ function validateLengths(minLength, maxLength) {
 
   if (maxLength < 50 || maxLength > 300) {
     showError("Max length must be between 50 and 300.");
-=======
-    showError("Please enter valid summary lengths.");
->>>>>>> origin/main
     return false;
   }
 
@@ -533,11 +381,7 @@ function startLoading() {
   summarizeBtn.innerText = "Summarizing...";
   spinner.classList.add("show");
   summaryBox.classList.remove("active");
-<<<<<<< HEAD
   showPlaceholder("Analyzing document and generating summary, please wait...");
-=======
-  showPlaceholder("Generating summary, please wait...");
->>>>>>> origin/main
 }
 
 function stopLoading() {
@@ -558,22 +402,16 @@ function showPlaceholder(message) {
 }
 
 function showError(message) {
-<<<<<<< HEAD
   errorMessage.className = "error";
   errorMessage.innerText = message;
 }
 
 function showSuccess(message) {
   errorMessage.className = "error success";
-=======
->>>>>>> origin/main
   errorMessage.innerText = message;
 }
 
 function clearMessage() {
-<<<<<<< HEAD
   errorMessage.className = "error";
-=======
->>>>>>> origin/main
   errorMessage.innerText = "";
 }

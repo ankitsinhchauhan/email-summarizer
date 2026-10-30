@@ -189,7 +189,6 @@ body {
   color: var(--muted);
 }
 
-<<<<<<< HEAD
 .file-info-row {
   display: flex;
   align-items: center;
@@ -229,9 +228,6 @@ body {
   color: #ffffff;
   transform: translateY(-1px);
 }
-
-=======
->>>>>>> origin/main
 .tabs {
   display: flex;
   gap: 10px;
@@ -282,6 +278,15 @@ textarea:focus,
 input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.18);
+}
+
+button:focus-visible,
+.tab:focus-visible,
+.theme-toggle:focus-visible,
+.custom-file-btn:focus-visible,
+.file-remove-btn:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .controls {
@@ -348,15 +353,12 @@ input:focus {
   font-size: 14px;
 }
 
-<<<<<<< HEAD
 .file-help {
   margin-top: 8px;
   color: var(--muted);
   font-size: 13px;
 }
 
-=======
->>>>>>> origin/main
 .error {
   color: var(--danger);
   margin-top: 10px;
@@ -364,13 +366,9 @@ input:focus {
   min-height: 18px;
 }
 
-<<<<<<< HEAD
 .error.success {
   color: var(--accent);
 }
-
-=======
->>>>>>> origin/main
 .hidden {
   display: none;
 }

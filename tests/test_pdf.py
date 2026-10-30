@@ -259,3 +259,28 @@ def test_multipage_bounded_chunking():
     summary = response.json()["summary"]
     assert "Page 1 details" in summary
     assert summary.endswith(".")
+
+
+def test_multipage_captures_page2_decision():
+    page_1 = (
+        "Executive Strategy Memorandum Page 1. "
+        "Enterprise computing paradigms have shifted from physical hardware to cloud hosting. "
+        "Our organization maintains legacy datacenters across North America and Europe."
+    )
+    page_2 = (
+        "Executive Strategy Memorandum Page 2. "
+        "The executive steering committee formally voted to shut down all on-premise datacenters by June 30, 2027. "
+        "Chief Financial Officer Walter White authorized a capital budget of $4.2 million for AWS migration services."
+    )
+    pdf_bytes = make_multipage_pdf([page_1, page_2])
+    response = client.post(
+        "/summarize-pdf",
+        files={"file": ("strategy_memo.pdf", pdf_bytes, "application/pdf")},
+        data={"max_length": 150, "min_length": 30},
+    )
+    assert response.status_code == 200
+    summary = response.json()["summary"]
+    # Must capture the critical vote and budget from Page 2
+    assert "voted to shut down" in summary
+    assert "$4.2 million" in summary
+    assert "Walter White" in summary

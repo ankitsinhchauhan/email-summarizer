@@ -1,0 +1,635 @@
+import json
+import os
+from io import BytesIO
+from pypdf import PdfWriter, PdfReader
+
+def make_text_pdf(pages_text: list) -> bytes:
+    writer = PdfWriter()
+    for text in pages_text:
+        content = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode("latin-1")
+        objects = [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+            b"<< /Length " + str(len(content)).encode() + b" >>\nstream\n" + content + b"\nendstream",
+            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        ]
+        pdf = bytearray(b"%PDF-1.4\n")
+        offsets = [0]
+        for index, obj in enumerate(objects, start=1):
+            offsets.append(len(pdf))
+            pdf.extend(f"{index} 0 obj\n".encode())
+            pdf.extend(obj)
+            pdf.extend(b"\nendobj\n")
+        xref_offset = len(pdf)
+        pdf.extend(f"xref\n0 {len(objects) + 1}\n".encode())
+        pdf.extend(b"0000000000 65535 f \n")
+        for offset in offsets[1:]:
+            pdf.extend(f"{offset:010} 00000 n \n".encode())
+        pdf.extend(
+            f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF".encode()
+        )
+        reader = PdfReader(BytesIO(bytes(pdf)))
+        writer.add_page(reader.pages[0])
+    out = BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+def make_encrypted_pdf(text: str) -> bytes:
+    raw = make_text_pdf([text])
+    writer = PdfWriter()
+    reader = PdfReader(BytesIO(raw))
+    writer.add_page(reader.pages[0])
+    writer.encrypt("secret123")
+    out = BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+def make_blank_scanned_pdf() -> bytes:
+    writer = PdfWriter()
+    writer.add_blank_page(width=612, height=792)
+    out = BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+# 32 Representative Samples
+samples = [
+    # -------------------- EMAILS (1-10) --------------------
+    {
+        "id": "email_01",
+        "category": "email",
+        "title": "Emergency Server Maintenance and Scheduled Outage",
+        "text": "Hi Team, I hope you are having a wonderful start to your week. The weather in Austin has been exceptionally pleasant today. We have detected a critical memory leak in the core caching cluster that requires urgent intervention. The database operations team has scheduled an emergency maintenance window for tonight, October 30, at 11:00 PM EST. During this window, all customer-facing portal services will be offline for approximately 45 minutes. System Administrator Marcus Vance will oversee the patching procedure. Please ensure all active ETL data pipelines are cleanly halted by 10:30 PM EST to prevent corrupting batch transactions. All client queries should be redirected to the status dashboard until service restoration at 11:45 PM EST.",
+        "key_placement": "tail",
+        "entities": {
+            "dates_deadlines": ["October 30", "11:00 PM EST", "10:30 PM EST", "11:45 PM EST"],
+            "names": ["Marcus Vance", "Austin"],
+            "amounts_numbers": ["45 minutes"],
+            "decisions": ["Scheduled emergency maintenance window"],
+            "action_items": ["Halt active ETL data pipelines by 10:30 PM EST", "Redirect client queries to status dashboard"]
+        },
+        "reference_summary": "Emergency maintenance is scheduled for October 30 at 11:00 PM EST to fix a critical memory leak, causing a 45-minute customer portal outage overseen by Marcus Vance. Team members must halt active ETL data pipelines by 10:30 PM EST and redirect queries to the status dashboard until service resumes at 11:45 PM EST."
+    },
+    {
+        "id": "email_02",
+        "category": "email",
+        "title": "Q4 Enterprise Budget Approval and Hiring Freeze Exemption",
+        "text": "Good morning executives, Thank you for joining our preliminary financial planning session yesterday. It was very encouraging to review our company-wide operational milestones. The executive finance committee met this morning and formally approved the revised Q4 infrastructure budget of $450,000 for AWS cloud migration. Furthermore, Chief Technology Officer Elena Rostova granted a special exemption to the hiring freeze, permitting the engineering department to hire 3 Senior DevOps Engineers immediately. Department managers must submit final departmental staffing rosters and requisition approvals to HR by November 5, 2026. Please note that unallocated capital will revert to central reserves on December 1.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["November 5, 2026", "December 1"],
+            "names": ["Elena Rostova", "AWS"],
+            "amounts_numbers": ["$450,000", "3 Senior DevOps Engineers"],
+            "decisions": ["Approved revised Q4 budget of $450,000", "Granted hiring freeze exemption for 3 engineers"],
+            "action_items": ["Submit staffing rosters to HR by November 5, 2026"]
+        },
+        "reference_summary": "The finance committee approved a $450,000 Q4 AWS migration budget, and CTO Elena Rostova authorized hiring 3 Senior DevOps Engineers despite the freeze. Department managers must submit staffing rosters to HR by November 5, 2026, before unused funds revert on December 1."
+    },
+    {
+        "id": "email_03",
+        "category": "email",
+        "title": "Vendor Contract Renewal Notice & Price Escalation",
+        "text": "Dear valued partner, We truly appreciate the collaborative relationship we have built over the past three fiscal years. Our team continuously seeks ways to enhance security and infrastructure reliability for all enterprise clients. We are writing to notify you that your annual licensing agreement for CloudShield Premier expires on November 15, 2026. Due to rising data hosting and global compliance costs, renewal rates will increase by 8.5%, bringing the revised annual contract total to $84,200. Account Director David Chen requires your signed contract addendum by 5:00 PM EST on November 10, 2026, to prevent disruption to your production API access. If the addendum is not received, automated account suspension will trigger on November 16.",
+        "key_placement": "tail",
+        "entities": {
+            "dates_deadlines": ["November 15, 2026", "November 10, 2026", "5:00 PM EST", "November 16"],
+            "names": ["CloudShield Premier", "David Chen"],
+            "amounts_numbers": ["8.5%", "$84,200", "three fiscal years"],
+            "decisions": ["Contract renewal rate increased by 8.5% to $84,200"],
+            "action_items": ["Sign contract addendum by 5:00 PM EST on November 10, 2026"]
+        },
+        "reference_summary": "CloudShield Premier annual agreement expires November 15, 2026, with an 8.5% price increase bringing the annual total to $84,200. A signed contract addendum must be submitted to David Chen by 5:00 PM EST on November 10, 2026, to avoid account suspension on November 16."
+    },
+    {
+        "id": "email_04",
+        "category": "email",
+        "title": "Customer Escalation: Critical Production API Outage SLA Breach",
+        "text": "Dear Support Leadership, I am reaching out regarding our Enterprise Service Level Agreement. We have enjoyed solid reliability throughout our initial contract period. However, today our transaction processing gateway suffered an unexpected 4-hour blackout starting at 08:00 UTC. Over 14,200 end-user payment transactions failed during this period, generating an estimated revenue loss of $115,000 for our retail merchants. Chief Operating Officer Rachel Adams requests an immediate root cause analysis and a formal post-mortem report by tomorrow, October 31, at 2:00 PM EST. Furthermore, we expect a contractual 20% billing credit applied to our November invoice as stipulated in Section 4.2 of our master services contract.",
+        "key_placement": "tail",
+        "entities": {
+            "dates_deadlines": ["October 31", "2:00 PM EST", "08:00 UTC", "November"],
+            "names": ["Rachel Adams", "Section 4.2"],
+            "amounts_numbers": ["4-hour", "14,200", "$115,000", "20%"],
+            "decisions": ["Demanded root cause post-mortem and 20% billing credit"],
+            "action_items": ["Deliver formal post-mortem by October 31 at 2:00 PM EST", "Apply 20% credit to November invoice"]
+        },
+        "reference_summary": "A 4-hour gateway outage caused 14,200 failed transactions and $115,000 in lost revenue. COO Rachel Adams demands a formal root cause analysis by October 31 at 2:00 PM EST and a contractual 20% billing credit applied to the November invoice."
+    },
+    {
+        "id": "email_05",
+        "category": "email",
+        "title": "Candidate Job Offer and Acceptance Deadline",
+        "text": "Dear Alexander, Thank you for taking the time to speak with our engineering leadership and executive panel last Friday. Everyone on the interviewing team was thoroughly impressed by your distributed systems architecture expertise. On behalf of Summit Analytics, I am thrilled to officially extend an offer for the position of Lead Backend Architect. This position offers a starting base salary of $175,000 per year, an annual performance bonus target of 15%, and 2,500 incentive stock options. Your designated start date will be December 1, 2026, reporting directly to VP of Engineering Laura Lin. Please review the attached formal offer package, sign the agreement, and return it to talent acquisition by Friday, November 6, at 5:00 PM PST.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["December 1, 2026", "November 6", "5:00 PM PST"],
+            "names": ["Alexander", "Summit Analytics", "Laura Lin"],
+            "amounts_numbers": ["$175,000", "15%", "2,500 options"],
+            "decisions": ["Extended job offer for Lead Backend Architect"],
+            "action_items": ["Sign and return offer agreement by November 6 at 5:00 PM PST"]
+        },
+        "reference_summary": "Summit Analytics offered Alexander the Lead Backend Architect role with a $175,000 base salary, 15% bonus, 2,500 stock options, and a December 1, 2026 start date under Laura Lin. The candidate must sign and return the offer by November 6 at 5:00 PM PST."
+    },
+    {
+        "id": "email_06",
+        "category": "email",
+        "title": "Security Vulnerability Disclosure: Action Required on CVE-2026-4412",
+        "text": "Attention All Software Developers, Security is a core commitment to our customers and partners worldwide. Please ensure you remain vigilant regarding phishing and external authentication attempts. The Information Security department has detected an active zero-day vulnerability (CVE-2026-4412) in our internal microservice authentication library. This vulnerability allows unauthenticated remote code execution with root privileges on compromised container hosts. Principal Security Officer Kevin Zhang has issued a mandatory patch directive across all backend clusters. All development teams must upgrade their dependency to version 3.4.1 and redeploy affected services no later than 6:00 PM UTC today. Any non-compliant pods remaining active past the deadline will be automatically quarantined from the production mesh.",
+        "key_placement": "distributed",
+        "entities": {
+            "dates_deadlines": ["6:00 PM UTC today"],
+            "names": ["Kevin Zhang", "CVE-2026-4412"],
+            "amounts_numbers": ["version 3.4.1"],
+            "decisions": ["Mandatory patch directive issued; non-compliant pods will be quarantined"],
+            "action_items": ["Upgrade authentication library to version 3.4.1 and redeploy by 6:00 PM UTC"]
+        },
+        "reference_summary": "A zero-day vulnerability (CVE-2026-4412) enables remote code execution in internal authentication libraries. Security Officer Kevin Zhang mandates that all development teams upgrade to version 3.4.1 and redeploy by 6:00 PM UTC today, or non-compliant pods will be quarantined."
+    },
+    {
+        "id": "email_07",
+        "category": "email",
+        "title": "Office Relocation and Remote Work Policy Transition",
+        "text": "Hello Austin Team Members, We have enjoyed our wonderful workspace on Congress Avenue for over six memorable years. We have hosted great company hackathons and social events in this building. However, following our rapid headcount expansion, executive leadership has finalized a lease for our new regional headquarters on Domain Boulevard. All employees will transition to a hybrid schedule requiring 2 days per week in-office starting January 15, 2027. Workplace Manager Brian O'Connor will distribute personalized building access cards and parking passes next week. All staff members must pack their personal desk belongings into provided crates by Friday, December 18, at 4:00 PM. Facilities will manage the physical moving of equipment over the weekend.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["January 15, 2027", "December 18", "4:00 PM"],
+            "names": ["Congress Avenue", "Domain Boulevard", "Brian O'Connor"],
+            "amounts_numbers": ["2 days per week", "six memorable years"],
+            "decisions": ["Finalized new headquarters lease and established 2-day in-office hybrid schedule"],
+            "action_items": ["Pack personal desk belongings by December 18 at 4:00 PM"]
+        },
+        "reference_summary": "Austin headquarters is relocating to Domain Boulevard, and a hybrid schedule requiring 2 in-office days per week takes effect January 15, 2027. Employees must pack personal desk belongings into crates by December 18 at 4:00 PM, and Brian O'Connor will distribute access passes next week."
+    },
+    {
+        "id": "email_08",
+        "category": "email",
+        "title": "Urgent Wire Transfer Authorization for European Acquisition",
+        "text": "Dear Treasury Department, This communication contains sensitive transactional details regarding Project Bluebird. Please treat the contents of this message with strict confidentiality. Our legal team and investment bankers in Frankfurt have confirmed the execution of the definitive acquisition agreement for NordTech GmbH. Finance Director Claudia Weber requests an immediate wire transfer authorization of 12,500,000 EUR to the escrow account at Deutsche Bank. Wire confirmation documents and dual cryptographic signatures must be logged in the treasury portal by 3:00 PM CET this afternoon. Failure to complete the escrow funding on schedule will incur a statutory liquidated penalty of 250,000 EUR under German commercial law.",
+        "key_placement": "tail",
+        "entities": {
+            "dates_deadlines": ["3:00 PM CET this afternoon"],
+            "names": ["Project Bluebird", "NordTech GmbH", "Claudia Weber", "Deutsche Bank"],
+            "amounts_numbers": ["12,500,000 EUR", "250,000 EUR"],
+            "decisions": ["Executed definitive acquisition agreement for NordTech GmbH"],
+            "action_items": ["Authorize 12,500,000 EUR wire to escrow and log signatures by 3:00 PM CET"]
+        },
+        "reference_summary": "Following the acquisition of NordTech GmbH, Finance Director Claudia Weber requests an immediate 12,500,000 EUR escrow wire transfer to Deutsche Bank by 3:00 PM CET today. Delays will trigger a 250,000 EUR penalty under German commercial law."
+    },
+    {
+        "id": "email_09",
+        "category": "email",
+        "title": "Customer Billing Dispute and Partial Refund Settlement",
+        "text": "Dear Customer Care Team, We appreciate your continuous dedication to resolving merchant tickets promptly and with empathy. Customer satisfaction remains the primary indicator of our brand trust. Regarding case ticket #88412 submitted by Meridian Retailers, Merchant Owner Samuel Sterling disputed recurring subscription charges totaling $4,850 assessed between June and August. Following a thorough technical review by billing engineer Maya Patel, we discovered an erroneous duplicate provisioning script. The management team has approved a one-time refund of $3,200 and a 6-month fee waiver valued at $1,650. Senior Representative Jordan Cole must process the merchant credit memo through Stripe by 5:00 PM EST today and send a formal letter of apology to the client.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["5:00 PM EST today", "June and August"],
+            "names": ["Meridian Retailers", "Samuel Sterling", "Maya Patel", "Jordan Cole", "Stripe"],
+            "amounts_numbers": ["$4,850", "$3,200", "$1,650", "6-month", "#88412"],
+            "decisions": ["Approved $3,200 refund and a 6-month fee waiver valued at $1,650"],
+            "action_items": ["Process credit memo through Stripe by 5:00 PM EST today and send apology letter"]
+        },
+        "reference_summary": "Due to a billing error on ticket #88412 for Meridian Retailers, management approved a $3,200 refund and a 6-month fee waiver ($1,650). Representative Jordan Cole must process the credit in Stripe by 5:00 PM EST today and issue an apology letter to Samuel Sterling."
+    },
+    {
+        "id": "email_10",
+        "category": "email",
+        "title": "Product Launch Readiness Review: Go/No-Go Decision",
+        "text": "Hi Everyone, Thank you for working tireless hours over the past six months on the next-generation Orion Analytics platform. The cross-functional executive steering committee conducted our formal Go/No-Go readiness review at 9:00 AM this morning. QA Lead Priya Sharma confirmed that all 14 P0 and P1 software blockers have been successfully resolved with 99.4% test suite pass rates. Based on these validation results, Chief Product Officer Mark Sterling officially announced a GO decision for the global commercial rollout on November 12, 2026. Marketing Director Chloe Bennett must execute the public press release distribution at 8:00 AM EST on launch day. Customer support agents must complete their mandatory feature certification by November 9.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["November 12, 2026", "8:00 AM EST on launch day", "November 9", "9:00 AM this morning"],
+            "names": ["Orion Analytics", "Priya Sharma", "Mark Sterling", "Chloe Bennett"],
+            "amounts_numbers": ["14 blockers", "99.4%", "six months"],
+            "decisions": ["Official GO decision for global commercial rollout on November 12, 2026"],
+            "action_items": ["Execute public press release on launch day at 8:00 AM EST", "Complete support certification by November 9"]
+        },
+        "reference_summary": "The executive steering committee approved a GO decision for the Orion Analytics global rollout on November 12, 2026, after resolving all P0/P1 blockers with a 99.4% test pass rate. Chloe Bennett will publish the press release at 8:00 AM EST on launch day, and support staff must complete certification by November 9."
+    },
+
+    # -------------------- ARTICLES (11-18) --------------------
+    {
+        "id": "article_01",
+        "category": "article",
+        "title": "Quantum Computing Breakthrough in Fault-Tolerant Logical Qubits",
+        "text": "Quantum computing researchers at the Zurich Institute of Technology have achieved a major milestone in fault-tolerant quantum error correction. The team demonstrated a physical architecture operating 100 logical qubits with error rates below 0.01%, surpassing the theoretical threshold for quantum supremacy. Lead Physicist Dr. Hans Zimmer noted that this breakthrough reduces decoherence susceptibility by a factor of ten. The consortium secured an additional $60 million in government research grants to scale the prototype toward 1,000 qubits by 2028. Commercial applications in molecular synthesis and cryptography are projected to enter field testing within five years.",
+        "key_placement": "lead",
+        "entities": {
+            "dates_deadlines": ["2028", "within five years"],
+            "names": ["Zurich Institute of Technology", "Dr. Hans Zimmer"],
+            "amounts_numbers": ["100 logical qubits", "0.01%", "$60 million", "1,000 qubits"],
+            "decisions": ["Secured $60M grant to scale prototype to 1,000 qubits by 2028"],
+            "action_items": ["Begin commercial field testing in molecular synthesis"]
+        },
+        "reference_summary": "Zurich Institute of Technology researchers achieved fault-tolerant quantum computation with 100 logical qubits at error rates below 0.01%. Led by Dr. Hans Zimmer, the team secured $60 million to scale to 1,000 qubits by 2028, with commercial molecular synthesis testing planned within five years."
+    },
+    {
+        "id": "article_02",
+        "category": "article",
+        "title": "Global Semiconductor Export Controls and Supply Chain Realignment",
+        "text": "The international semiconductor landscape is experiencing profound structural transformations following new multilateral trade agreements. Major manufacturing hubs in East Asia have reported a 14% drop in export shipments over the past two quarters. In response, the European Union approved a 43 billion EUR subsidy package under the European Chips Act to construct advanced fabrication facilities in Dresden and Grenoble. Lead Economic Analyst Marie Dupont stated that localized domestic chip fabrication will mitigate critical supply chain shocks by 2029. Automakers and electronics manufacturers must diversify supplier allocations before the implementation of tariffs on December 15, 2026.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["December 15, 2026", "2029"],
+            "names": ["European Union", "European Chips Act", "Marie Dupont", "Dresden", "Grenoble"],
+            "amounts_numbers": ["14%", "43 billion EUR"],
+            "decisions": ["Approved 43B EUR subsidy package under European Chips Act"],
+            "action_items": ["Diversify supplier allocations before tariffs take effect December 15, 2026"]
+        },
+        "reference_summary": "In response to falling semiconductor exports, the EU approved a 43 billion EUR subsidy under the European Chips Act to build chip fabrication plants in Dresden and Grenoble. Analyst Marie Dupont projects domestic resilience by 2029, but manufacturers must diversify suppliers before tariffs begin December 15, 2026."
+    },
+    {
+        "id": "article_03",
+        "category": "article",
+        "title": "Central Bank Interest Rate Policy and Inflation Targets",
+        "text": "Financial markets across North America rallied sharply following the Federal Reserve's monetary policy announcement on Wednesday afternoon. Federal Reserve Chairman Jerome Powell declared a 50-basis-point interest rate cut, lowering the benchmark federal funds rate to 4.25%. The central bank cited falling consumer price inflation, which decelerated to 2.3% year-over-year in September. Commercial banks are expected to lower mortgage rates and auto loan yields starting next Monday. Market strategists project an additional 25-basis-point reduction during the upcoming December 16 committee meeting if labor market data remains stable.",
+        "key_placement": "lead",
+        "entities": {
+            "dates_deadlines": ["Wednesday afternoon", "next Monday", "December 16", "September"],
+            "names": ["Federal Reserve", "Jerome Powell"],
+            "amounts_numbers": ["50-basis-point", "4.25%", "2.3%", "25-basis-point"],
+            "decisions": ["Lowered benchmark interest rate by 50 basis points to 4.25%"],
+            "action_items": ["Commercial banks to lower loan yields starting Monday"]
+        },
+        "reference_summary": "Federal Reserve Chairman Jerome Powell announced a 50-basis-point rate cut to 4.25% as inflation cooled to 2.3% in September. Commercial banks will reduce consumer rates next Monday, and analysts forecast an additional 25-basis-point cut at the December 16 meeting."
+    },
+    {
+        "id": "article_04",
+        "category": "article",
+        "title": "Clinical Trial Phase III Results for Alzheimer's Monoclonal Antibody",
+        "text": "Medical researchers at Oxford Biosystems released promising clinical trial results for a novel monoclonal antibody therapy targeting neurodegenerative decline. The multinational Phase III study monitored 2,400 early-stage Alzheimer's patients over an 18-month duration. Participants receiving the bi-weekly infusion demonstrated a 34% reduction in cognitive decline compared to the placebo control group. Chief Medical Investigator Dr. Claire Bennett confirmed that regulatory approval applications will be submitted to the FDA and EMA by January 20, 2027. If approved, global commercial distribution is projected to launch in late 2027 at an estimated cost of $26,000 per patient annually.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["January 20, 2027", "late 2027", "18-month"],
+            "names": ["Oxford Biosystems", "Dr. Claire Bennett", "FDA", "EMA"],
+            "amounts_numbers": ["2,400 patients", "34% reduction", "$26,000"],
+            "decisions": ["Approved filing of FDA and EMA regulatory submissions by Jan 20, 2027"],
+            "action_items": ["Submit regulatory applications to FDA/EMA by January 20, 2027"]
+        },
+        "reference_summary": "Oxford Biosystems Phase III trial of 2,400 Alzheimer's patients demonstrated a 34% reduction in cognitive decline over 18 months. Dr. Claire Bennett confirmed regulatory filings with the FDA and EMA will be submitted by January 20, 2027, ahead of a planned late 2027 rollout priced at $26,000 annually."
+    },
+    {
+        "id": "article_05",
+        "category": "article",
+        "title": "Renewable Energy Transition: Offshore Wind Farm Milestone",
+        "text": "Offshore renewable energy capacity reached a historic record today as the North Sea Wind Coalition commissioned the Dogger Bank Mega-Array. The $3.8 billion installation features 270 high-capacity wind turbines generating 3.6 gigawatts of clean electricity, enough to power 4.5 million homes. UK Energy Secretary Alistair Campbell officially inaugurated the transmission substation during a ceremony in Hull. Project developers committed to expanding transmission interconnectors to Scandinavian power grids by August 2027. Grid operators must balance peak winter loads by transitioning municipal utilities to wind-priority dispatch by November 30.",
+        "key_placement": "lead",
+        "entities": {
+            "dates_deadlines": ["August 2027", "November 30"],
+            "names": ["North Sea Wind Coalition", "Dogger Bank", "Alistair Campbell", "Hull"],
+            "amounts_numbers": ["$3.8 billion", "270 turbines", "3.6 gigawatts", "4.5 million homes"],
+            "decisions": ["Commissioned 3.6 GW offshore wind installation"],
+            "action_items": ["Transition utilities to wind-priority dispatch by November 30"]
+        },
+        "reference_summary": "The $3.8 billion Dogger Bank wind farm was commissioned with 270 turbines generating 3.6 gigawatts to power 4.5 million homes. Energy Secretary Alistair Campbell inaugurated the project, and utilities must adopt wind-priority dispatch by November 30 ahead of Scandinavian grid connections by August 2027."
+    },
+    {
+        "id": "article_06",
+        "category": "article",
+        "title": "Cybersecurity Incident: Critical Healthcare Records Compromise",
+        "text": "A severe cybersecurity incident has impacted healthcare administrative networks across five Midwestern states. Forensic investigators identified unauthorized intrusion into the centralized database of Heartland Health Systems occurring between October 12 and October 18. An estimated 1.8 million patient medical and billing records were extracted, including Social Security numbers and diagnosis codes. CISO Kenneth Morales announced that Heartland has engaged Mandiant for incident response and offered two years of free credit monitoring to all affected individuals. Healthcare providers must verify that all database endpoints have deployed multi-factor authentication before November 10 to avoid statutory HHS fines.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["October 12 and October 18", "November 10"],
+            "names": ["Heartland Health Systems", "Kenneth Morales", "Mandiant", "HHS"],
+            "amounts_numbers": ["1.8 million records", "two years", "five Midwestern states"],
+            "decisions": ["Engaged Mandiant and offered two years of free credit monitoring"],
+            "action_items": ["Deploy multi-factor authentication on database endpoints by November 10"]
+        },
+        "reference_summary": "A data breach at Heartland Health Systems exposed 1.8 million patient records between October 12 and 18. CISO Kenneth Morales engaged Mandiant and provided two years of free credit monitoring, while providers must enforce multi-factor authentication by November 10 to avoid HHS penalties."
+    },
+    {
+        "id": "article_07",
+        "category": "article",
+        "title": "Commercial Spaceflight: Heavy Orbital Launch Success",
+        "text": "Space exploration entered a new commercial era this morning as Nova Aerospace successfully launched its Titan Heavy rocket from Cape Canaveral. The 110-meter orbital booster delivered a 45-metric-ton payload consisting of 60 communication satellites into geostationary transfer orbit. Mission Director Dr. Samantha Reed confirmed that both reusable first-stage booster cores touched down on automated drone ships 9 minutes after liftoff. The company confirmed an $850 million commercial launch contract with telecommunications conglomerate StarLink Global. Commercial satellite operators must complete payload compatibility testing by March 15, 2027, for the next scheduled launch window.",
+        "key_placement": "lead",
+        "entities": {
+            "dates_deadlines": ["March 15, 2027", "9 minutes after liftoff"],
+            "names": ["Nova Aerospace", "Titan Heavy", "Cape Canaveral", "Dr. Samantha Reed", "StarLink Global"],
+            "amounts_numbers": ["110-meter", "45-metric-ton", "60 satellites", "$850 million"],
+            "decisions": ["Secured $850M commercial contract following successful launch"],
+            "action_items": ["Complete satellite payload compatibility testing by March 15, 2027"]
+        },
+        "reference_summary": "Nova Aerospace launched its Titan Heavy rocket from Cape Canaveral, placing 60 satellites into orbit while recovering both first-stage boosters. Mission Director Dr. Samantha Reed confirmed an $850 million launch contract with StarLink Global, with payload testing required by March 15, 2027."
+    },
+    {
+        "id": "article_08",
+        "category": "article",
+        "title": "Autonomous Vehicle Regulation and Safety Compliance Guidelines",
+        "text": "Transportation regulators in California have issued revised operating standards for commercial autonomous robotaxi services in urban zones. Following a six-month safety investigation, the California Public Utilities Commission voted 4-1 to require human monitoring specialists within all fleet vehicles during nighttime operating hours. Fleet operators must maintain $10 million in commercial liability insurance per vehicle and report all disengagements and collisions within 24 hours. Department Director Gregory Hayes emphasized that companies must achieve full compliance by December 1, 2026, or risk immediate license revocation. Ride-hailing companies estimate the rule will increase per-mile operating expenses by 22%.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["December 1, 2026", "24 hours", "six-month"],
+            "names": ["California Public Utilities Commission", "Gregory Hayes"],
+            "amounts_numbers": ["4-1 vote", "$10 million", "22%"],
+            "decisions": ["Voted 4-1 to mandate human safety specialists in nighttime robotaxis"],
+            "action_items": ["Achieve compliance and maintain $10M liability insurance by December 1, 2026"]
+        },
+        "reference_summary": "California regulators voted 4-1 to mandate human safety specialists in nighttime autonomous robotaxis and require $10 million in liability insurance per vehicle. Director Gregory Hayes warned that operators must achieve full compliance by December 1, 2026, or face immediate license revocation."
+    },
+
+    # -------------------- TXT DOCUMENTS (19-25) --------------------
+    {
+        "id": "txt_01",
+        "category": "txt",
+        "title": "Production Outage Post-Mortem and Incident Review (INC-9042)",
+        "text": "INCIDENT POST-MORTEM REPORT: INC-9042\nIncident Date: October 24, 2026\nSeverity Level: SEV-1\nDuration: 135 minutes\n\nExecutive Overview:\nAt 14:15 UTC, the primary payment gateway experienced a catastrophic failure affecting all checkout flows across North American regions. Over 38,000 checkout attempts were rejected, resulting in $620,000 in unrecoverable abandoned cart volume.\n\nRoot Cause Analysis:\nA faulty schema migration script deployed by the checkout services team omitted an index on the user_tokens table. This caused full table locks under peak database concurrency, exhausting connection pools within 180 seconds.\n\nCorrective Actions and Ownership:\n1. Lead DBA Patrick Nolan will implement automated query index validation in CI/CD by November 4, 2026.\n2. DevOps Director Sarah Vance will reconfigure connection pool timeouts and alerting thresholds by November 8, 2026.\n3. The engineering group will conduct a mandatory database reliability training session on November 12, 2026.",
+        "key_placement": "tail",
+        "entities": {
+            "dates_deadlines": ["October 24, 2026", "November 4, 2026", "November 8, 2026", "November 12, 2026"],
+            "names": ["INC-9042", "Patrick Nolan", "Sarah Vance"],
+            "amounts_numbers": ["135 minutes", "38,000 checkout attempts", "$620,000", "180 seconds"],
+            "decisions": ["Identified missing index on user_tokens as root cause"],
+            "action_items": ["Implement automated CI index validation by Nov 4", "Reconfigure connection pool alerts by Nov 8", "Conduct DB training Nov 12"]
+        },
+        "reference_summary": "A 135-minute SEV-1 outage (INC-9042) on October 24 caused 38,000 failed checkouts and $620,000 in lost revenue due to an unindexed database migration. Patrick Nolan must automate CI index validation by November 4, Sarah Vance will reconfigure connection pool alerts by November 8, and reliability training is scheduled for November 12."
+    },
+    {
+        "id": "txt_02",
+        "category": "txt",
+        "title": "Software Release Notes: Platform Version 4.8.0 Major Update",
+        "text": "RELEASE NOTES: PLATFORM VERSION 4.8.0\nRelease Date: October 28, 2026\nTarget Environment: Production Mesh\n\nOverview:\nVersion 4.8.0 introduces optimized event streaming, sub-second search indexing, and unified RBAC administration.\n\nKey Highlights and Changes:\n- Search Latency: Elastic cluster throughput improved by 45%, reducing p99 response times from 320ms to 48ms.\n- Security: Deprecated legacy TLS 1.1 handshakes; TLS 1.3 is now strictly enforced across all external ingress points.\n- Deprecations: The v1 REST reporting API will be permanently sunset on January 31, 2027. All clients must migrate to GraphQL v2 endpoints.\n\nDeployment Instructions:\nDevOps Engineer Sean Murphy must execute database migration scripts at 02:00 AM UTC on November 2, 2026. Microservice rollouts must follow canary deployment schedules with a 15% traffic split over 2 hours.",
+        "key_placement": "tail",
+        "entities": {
+            "dates_deadlines": ["October 28, 2026", "January 31, 2027", "November 2, 2026", "02:00 AM UTC"],
+            "names": ["Sean Murphy", "GraphQL v2"],
+            "amounts_numbers": ["Version 4.8.0", "45%", "48ms", "15% traffic split", "2 hours"],
+            "decisions": ["Deprecated legacy TLS 1.1; scheduled v1 REST API sunset for January 31, 2027"],
+            "action_items": ["Execute DB migration on Nov 2 at 02:00 AM UTC", "Migrate API clients to GraphQL v2"]
+        },
+        "reference_summary": "Version 4.8.0 improves search latency by 45% (down to 48ms), enforces TLS 1.3, and announces the sunset of the v1 REST API on January 31, 2027. Sean Murphy will deploy migrations on November 2 at 02:00 AM UTC using a 15% canary split."
+    },
+    {
+        "id": "txt_03",
+        "category": "txt",
+        "title": "Quarterly Board of Directors Meeting Minutes and Resolutions",
+        "text": "MINUTES OF THE QUARTERLY BOARD OF DIRECTORS MEETING\nDate: October 15, 2026\nLocation: Executive Boardroom, New York\n\nAttendance:\nPresent: Chairwoman Eleanor Vance, CEO Thomas Sterling, CFO Marcus Drake, Independent Director Lydia Chen.\n\nKey Resolutions Passed:\n1. Dividend Declaration: The Board unanimously approved a quarterly cash dividend of $0.45 per common share, payable on December 15, 2026, to shareholders of record as of November 20, 2026.\n2. Share Repurchase Authorization: Authorized an expansion of the corporate share buyback program by $150 million over the next 12 months.\n3. Executive Compensation: Approved the 2027 performance milestone targets for executive management.\n\nAction Directives:\nCorporate Secretary Angela Ross will file Form 8-K with the SEC by October 20, 2026. CFO Marcus Drake will initiate the credit facility syndicate renewal by November 30.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["December 15, 2026", "November 20, 2026", "October 20, 2026", "November 30"],
+            "names": ["Eleanor Vance", "Thomas Sterling", "Marcus Drake", "Angela Ross", "SEC"],
+            "amounts_numbers": ["$0.45 per share", "$150 million", "12 months", "Form 8-K"],
+            "decisions": ["Approved $0.45 per share dividend and $150M share buyback expansion"],
+            "action_items": ["File Form 8-K with SEC by Oct 20", "Initiate credit facility renewal by Nov 30"]
+        },
+        "reference_summary": "The Board approved a quarterly dividend of $0.45 per share payable December 15, 2026, and expanded the share repurchase program by $150 million. Corporate Secretary Angela Ross must file Form 8-K with the SEC by October 20, and Marcus Drake will manage credit renewal by November 30."
+    },
+    {
+        "id": "txt_04",
+        "category": "txt",
+        "title": "Global Information Security Policy: Remote Access and Endpoint Compliance",
+        "text": "CORPORATE POLICY DOCUMENT: SEC-POL-2026\nTitle: Remote Access and Endpoint Device Security\nEffective Date: November 1, 2026\nClassification: Internal Mandatory Policy\n\n1. Scope and Applicability:\nThis policy applies to all full-time employees, contractors, and third-party vendors accessing corporate infrastructure.\n\n2. Mandatory Compliance Requirements:\n- All remote workstations must run enterprise endpoint detection and response (EDR) software with definitions updated every 24 hours.\n- Hard disk drives on all company-issued laptops must use AES-256 bit full disk encryption.\n- Multi-factor authentication (MFA) via hardware security tokens or biometrics is mandatory for all VPN connections.\n\n3. Non-Compliance and Deadlines:\nChief Information Security Officer David Zhao stated that employee endpoint validation scans will commence November 15, 2026. Any device failing compliance after November 25 will be permanently revoked from network access. Violations are subject to disciplinary review and termination.",
+        "key_placement": "tail",
+        "entities": {
+            "dates_deadlines": ["November 1, 2026", "November 15, 2026", "November 25", "24 hours"],
+            "names": ["SEC-POL-2026", "David Zhao", "EDR"],
+            "amounts_numbers": ["AES-256 bit"],
+            "decisions": ["Mandated EDR software, AES-256 encryption, and hardware MFA for all remote devices"],
+            "action_items": ["Complete device endpoint validation before network revocation on November 25"]
+        },
+        "reference_summary": "Effective November 1, 2026, policy SEC-POL-2026 mandates AES-256 full disk encryption, hardware MFA, and active EDR software on all remote devices. CISO David Zhao announced that compliance validation begins November 15, and non-compliant devices will be permanently disconnected on November 25."
+    },
+    {
+        "id": "txt_05",
+        "category": "txt",
+        "title": "Data Engineering Pipeline Migration: Snowflake Transition Plan",
+        "text": "TECHNICAL SPECIFICATION: DATA PIPELINE MODERNIZATION\nAuthor: Lead Architect Martin Green\nStatus: Approved for Implementation\n\nContext and Scope:\nOur on-premise Apache Hadoop clusters have reached physical storage capacity and incur $42,000 in monthly maintenance overhead. This engineering initiative migrates our 650-terabyte data warehouse to Snowflake on Google Cloud.\n\nArchitecture Plan:\n- Ingestion: Apache Kafka event streams will route real-time telemetry to Snowflake Snowpipe with sub-10 second ingestion latency.\n- Cost Projections: The cloud architecture will reduce infrastructure costs by 38%, saving $190,000 annually.\n\nMilestones and Execution:\n1. Phase 1 historical data migration begins November 5, 2026, managed by Senior Engineer Tyler Ross.\n2. Parallel pipeline validation will run from November 20 to December 10, 2026.\n3. The legacy Hadoop cluster will be permanently decommissioned on December 31, 2026.",
+        "key_placement": "tail",
+        "entities": {
+            "dates_deadlines": ["November 5, 2026", "November 20", "December 10, 2026", "December 31, 2026"],
+            "names": ["Martin Green", "Tyler Ross", "Snowflake", "Hadoop"],
+            "amounts_numbers": ["650-terabyte", "$42,000", "38%", "$190,000 annually"],
+            "decisions": ["Approved migration of 650 TB warehouse to Snowflake on GCP"],
+            "action_items": ["Tyler Ross to launch Phase 1 migration Nov 5; decommission Hadoop Dec 31"]
+        },
+        "reference_summary": "Martin Green's approved modernization plan migrates a 650-terabyte data warehouse from Hadoop to Snowflake, cutting costs by 38% ($190,000 annually). Historical migration begins November 5, 2026 under Tyler Ross, with the legacy cluster scheduled for decommissioning on December 31."
+    },
+    {
+        "id": "txt_06",
+        "category": "txt",
+        "title": "Quarterly Sales Performance and Revenue Breakdown Recap",
+        "text": "Q3 SALES PERFORMANCE SUMMARY REPORT\nDepartment: Global Enterprise Commercial Sales\nReporting Period: July 1 - September 30, 2026\n\nExecutive Highlights:\nGlobal sales bookings reached a record $28.4 million in Q3, representing a 26% year-over-year increase and exceeding quota targets by $3.2 million. The Europe, Middle East, and Africa (EMEA) region led all business divisions, contributing $11.8 million in total contract value.\n\nMajor Closed Deals:\n- NordLB Financial: Multi-year cloud security subscription valued at $4.6 million.\n- Apex Logistics: Supply chain optimization platform contract valued at $3.1 million.\n\nQuarterly Action Directives:\nVP of Global Sales Catherine Bell instructed account directors to finalize Q4 forecast commits by November 6, 2026. Regional sales directors must submit commission payout audit sheets to payroll by November 15.",
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["November 6, 2026", "November 15", "July 1 - September 30, 2026"],
+            "names": ["Catherine Bell", "NordLB Financial", "Apex Logistics", "EMEA"],
+            "amounts_numbers": ["$28.4 million", "26%", "$3.2 million", "$11.8 million", "$4.6 million", "$3.1 million"],
+            "decisions": ["Recognized record Q3 bookings of $28.4 million"],
+            "action_items": ["Finalize Q4 forecast commits by Nov 6; submit commission audits by Nov 15"]
+        },
+        "reference_summary": "Q3 enterprise sales reached a record $28.4 million (up 26% YoY), driven by EMEA ($11.8M) and major deals with NordLB ($4.6M) and Apex Logistics ($3.1M). VP Catherine Bell directed teams to finalize Q4 forecast commits by November 6, 2026, and submit commission sheets by November 15."
+    },
+    {
+        "id": "txt_07",
+        "category": "txt",
+        "title": "Corporate Confidentiality and Non-Disclosure Agreement Excerpt",
+        "text": "MUTUAL NON-DISCLOSURE AND PROPRIETARY INFORMATION AGREEMENT\nEffective Date: October 20, 2026\nParties: Vantage Core Technologies Inc. and Horizon Robotics LLC\n\n1. Confidential Information:\nRecipient agrees to protect all proprietary source code, algorithmic designs, customer lists, and financial forecasts disclosed by Discloser with the same degree of care it uses for its own confidential assets, but not less than reasonable care.\n\n2. Term and Survival:\nThe confidentiality obligations hereunder shall survive for a period of five (5) years following the termination of formal discussions.\n\n3. Injunctive Relief and Governing Law:\nIn the event of an unauthorized breach, Discloser is entitled to seek equitable injunctive relief and liquidated damages of up to $500,000 per violation. This Agreement is governed by the laws of the State of Delaware. Authorized signatories Mark Sterling and Alicia Gomez must exchange physical countersigned counterparts by November 10, 2026.",
+        "key_placement": "tail",
+        "entities": {
+            "dates_deadlines": ["October 20, 2026", "November 10, 2026", "five (5) years"],
+            "names": ["Vantage Core Technologies", "Horizon Robotics", "Mark Sterling", "Alicia Gomez", "Delaware"],
+            "amounts_numbers": ["$500,000 per violation"],
+            "decisions": ["Established 5-year confidentiality obligation with $500,000 liquidated damages"],
+            "action_items": ["Exchange physical countersigned agreements by November 10, 2026"]
+        },
+        "reference_summary": "Vantage Core Technologies and Horizon Robotics entered a mutual NDA protecting proprietary algorithms and financial data for five years, with $500,000 liquidated damages for unauthorized disclosure. Mark Sterling and Alicia Gomez must exchange countersigned physical copies by November 10, 2026."
+    },
+
+    # -------------------- PDF DOCUMENTS (26-32) --------------------
+    {
+        "id": "pdf_01",
+        "category": "pdf",
+        "title": "Master Services Agreement: Software Consulting Statement of Work",
+        "pdf_type": "text_single_page",
+        "pages": [
+            "MASTER CONSULTING SERVICES STATEMENT OF WORK. "
+            "Client: OmniCorp International. "
+            "Provider: Apex Engineering Solutions LLC. "
+            "Effective Date: November 1, 2026. "
+            "Provider will deliver automated Kubernetes cluster infrastructure and continuous deployment pipelines. "
+            "The total fixed consulting fee is $180,000, payable in three milestone installments of $60,000 each. "
+            "Milestone 1 architecture delivery is due on December 15, 2026. "
+            "Late deliveries incur a daily penalty fee of $1,500. "
+            "Authorizing Officer James Thorne must sign and return this document by November 5, 2026."
+        ],
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["November 1, 2026", "December 15, 2026", "November 5, 2026"],
+            "names": ["OmniCorp International", "Apex Engineering Solutions", "James Thorne"],
+            "amounts_numbers": ["$180,000", "$60,000", "$1,500 daily penalty"],
+            "decisions": ["Established $180,000 Kubernetes consulting contract"],
+            "action_items": ["James Thorne must return signed agreement by Nov 5, 2026"]
+        },
+        "reference_summary": "Apex Engineering agreed to deliver Kubernetes infrastructure for OmniCorp under a $180,000 contract paid in three $60,000 installments. Milestone 1 is due December 15, 2026 with a $1,500 daily late penalty, and James Thorne must sign by November 5, 2026."
+    },
+    {
+        "id": "pdf_02",
+        "category": "pdf",
+        "title": "Multi-Page Strategy Memo: Cloud Migration Roadmap (Critical Tail on Page 2)",
+        "pdf_type": "text_multipage",
+        "pages": [
+            # Page 1: Background and general context
+            "EXECUTIVE CLOUD STRATEGY MEMORANDUM - PAGE 1. "
+            "Over the past decade enterprise computing paradigms have transitioned from on-premise hardware to distributed cloud infrastructure. "
+            "Our organization maintains 14 distinct datacenter environments across North America and Europe. "
+            "Maintaining physical servers requires significant facilities cooling, power redundancy, and hardware replacement cycles. "
+            "Industry benchmarks indicate modern cloud environments enhance deployment agility and developer satisfaction.",
+            # Page 2: Key decisions, budget, and deadlines (CRITICAL INFO ON PAGE 2)
+            "EXECUTIVE CLOUD STRATEGY MEMORANDUM - PAGE 2. "
+            "The executive steering committee formally voted to shut down all on-premise datacenters by June 30, 2027. "
+            "Chief Financial Officer Walter White authorized a capital budget expenditure of $4.2 million for AWS migration services. "
+            "Director of Infrastructure Brenda Scott will lead the transition team and report progress bi-weekly. "
+            "All department leaders must submit application dependency matrices by December 15, 2026."
+        ],
+        "key_placement": "page_2",
+        "entities": {
+            "dates_deadlines": ["June 30, 2027", "December 15, 2026"],
+            "names": ["Walter White", "Brenda Scott", "AWS"],
+            "amounts_numbers": ["$4.2 million", "14 distinct datacenters"],
+            "decisions": ["Voted to decommission all on-premise datacenters by June 30, 2027", "Authorized $4.2M budget"],
+            "action_items": ["Submit application dependency matrices by Dec 15, 2026"]
+        },
+        "reference_summary": "The executive committee voted to decommission all on-premise datacenters by June 30, 2027, backed by a $4.2 million AWS migration budget authorized by CFO Walter White. Brenda Scott will lead the transition, and department leaders must submit application dependency matrices by December 15, 2026."
+    },
+    {
+        "id": "pdf_03",
+        "category": "pdf",
+        "title": "Financial Statement Q3: Balance Sheet and Earnings Summary",
+        "pdf_type": "text_single_page",
+        "pages": [
+            "QUARTERLY FINANCIAL STATEMENT - Q3 REPORT. "
+            "Total consolidated net revenues for the quarter reached $94.6 million, an increase of 18.2% compared to $80.0 million in Q3 prior year. "
+            "Gross profit margin improved by 240 basis points to 64.5%. "
+            "Operating income was $22.1 million compared to $16.4 million in the prior year period. "
+            "Cash and short-term investments totaled $112.5 million as of September 30, 2026. "
+            "Chief Accounting Officer Daniel Evans scheduled the formal investor conference call for November 4 at 10:00 AM EST."
+        ],
+        "key_placement": "lead",
+        "entities": {
+            "dates_deadlines": ["September 30, 2026", "November 4", "10:00 AM EST"],
+            "names": ["Daniel Evans"],
+            "amounts_numbers": ["$94.6 million", "18.2%", "64.5%", "$22.1 million", "$112.5 million"],
+            "decisions": ["Reported 18.2% revenue growth to $94.6M and 64.5% gross margin"],
+            "action_items": ["Host investor conference call on November 4 at 10:00 AM EST"]
+        },
+        "reference_summary": "Q3 consolidated revenue increased 18.2% to $94.6 million with a 64.5% gross margin and $22.1 million in operating income. Cash reserves stood at $112.5 million on September 30, 2026, and CAO Daniel Evans scheduled the earnings call for November 4 at 10:00 AM EST."
+    },
+    {
+        "id": "pdf_04",
+        "category": "pdf",
+        "title": "Technical Whitepaper: Zero-Trust Network Architecture Implementation",
+        "pdf_type": "text_single_page",
+        "pages": [
+            "TECHNICAL WHITEPAPER: ZERO-TRUST ARCHITECTURE SPECIFICATION. "
+            "Modern perimeter-based network defenses are insufficient against sophisticated state-sponsored intrusions. "
+            "Zero Trust Architecture enforces continuous cryptographic verification for every user, device, and API transaction. "
+            "Implementing micro-segmentation reduced lateral attack surfaces by 82% across enterprise test environments. "
+            "Lead Security Architect Dr. Frank Miller mandates migrating all internal services to mTLS by January 15, 2027. "
+            "Infrastructure engineers must complete protocol interoperability audits by December 1, 2026."
+        ],
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["January 15, 2027", "December 1, 2026"],
+            "names": ["Dr. Frank Miller", "Zero Trust"],
+            "amounts_numbers": ["82% reduction"],
+            "decisions": ["Mandated complete transition to mTLS micro-segmentation"],
+            "action_items": ["Complete protocol interoperability audits by Dec 1, 2026"]
+        },
+        "reference_summary": "Zero Trust Architecture with micro-segmentation reduced lateral attack surfaces by 82% in testing. Dr. Frank Miller mandates migrating all internal services to mTLS by January 15, 2027, with interoperability audits due by December 1, 2026."
+    },
+    {
+        "id": "pdf_05",
+        "category": "pdf",
+        "title": "Compliance Audit Report: SOC 2 Type II Non-Conformance Findings",
+        "pdf_type": "text_single_page",
+        "pages": [
+            "SOC 2 TYPE II COMPLIANCE AUDIT FINDINGS REPORT. "
+            "Auditing Firm: Grant Thornton LLP. "
+            "Examination Period: October 1, 2025 to September 30, 2026. "
+            "The independent auditor issued an unqualified opinion with two minor non-conformance remediation notices. "
+            "First, quarterly user access revocation reviews were delayed by an average of 14 days in three business units. "
+            "Second, production disaster recovery failover tests lacked documented executive sign-offs. "
+            "CISO Ronald Murphy must submit the formal corrective action plan to auditors by November 20, 2026."
+        ],
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["November 20, 2026", "September 30, 2026"],
+            "names": ["Grant Thornton LLP", "Ronald Murphy"],
+            "amounts_numbers": ["two minor notices", "14 days"],
+            "decisions": ["Received unqualified SOC 2 opinion with two minor remediation findings"],
+            "action_items": ["Submit corrective action plan to auditors by Nov 20, 2026"]
+        },
+        "reference_summary": "Grant Thornton issued an unqualified SOC 2 Type II report noted with two minor deficiencies regarding delayed access revocations and undocumented disaster recovery sign-offs. CISO Ronald Murphy must submit a corrective action plan by November 20, 2026."
+    },
+    {
+        "id": "pdf_06",
+        "category": "pdf",
+        "title": "Encrypted Confidential PDF Document (Security Test Case)",
+        "pdf_type": "encrypted",
+        "pages": [
+            "CONFIDENTIAL EXECUTIVE COMPENSATION COMMITTEE REPORT. "
+            "This document is encrypted using standard security algorithms. "
+            "Board members approved executive equity awards totaling $12,000,000 for fiscal 2027. "
+            "General Counsel Henry Clark will file Form 4 statements with the SEC by December 5, 2026."
+        ],
+        "key_placement": "middle",
+        "entities": {
+            "dates_deadlines": ["December 5, 2026"],
+            "names": ["Henry Clark", "SEC"],
+            "amounts_numbers": ["$12,000,000"],
+            "decisions": ["Approved executive equity awards totaling $12M"],
+            "action_items": ["File Form 4 statements with SEC by Dec 5, 2026"]
+        },
+        "reference_summary": "Board approved $12 million in executive equity awards for fiscal 2027, with General Counsel Henry Clark filing Form 4 statements with the SEC by December 5, 2026."
+    },
+    {
+        "id": "pdf_07",
+        "category": "pdf",
+        "title": "Scanned Image-Only PDF Document (OCR Test Case)",
+        "pdf_type": "scanned_blank",
+        "pages": [],
+        "key_placement": "none",
+        "entities": {
+            "dates_deadlines": [],
+            "names": [],
+            "amounts_numbers": [],
+            "decisions": [],
+            "action_items": []
+        },
+        "reference_summary": "Scanned image document requiring Optical Character Recognition (OCR) to extract text."
+    }
+]
+
+def main():
+    os.makedirs("tests/data", exist_ok=True)
+    os.makedirs("tests/data/pdfs", exist_ok=True)
+
+    # Generate physical PDF files for PDF samples
+    for sample in samples:
+        if sample["category"] == "pdf":
+            pdf_path = os.path.join("tests/data/pdfs", f"{sample['id']}.pdf")
+            if sample.get("pdf_type") == "encrypted":
+                raw_bytes = make_encrypted_pdf(sample["pages"][0])
+            elif sample.get("pdf_type") == "scanned_blank":
+                raw_bytes = make_blank_scanned_pdf()
+            else:
+                raw_bytes = make_text_pdf(sample["pages"])
+            with open(pdf_path, "wb") as f:
+                f.write(raw_bytes)
+            sample["pdf_path"] = pdf_path
+            # For non-scanned PDFs, concatenate pages into 'text' for evaluation comparison
+            if sample.get("pdf_type") != "scanned_blank":
+                sample["text"] = "\n\n".join(sample["pages"])
+            else:
+                sample["text"] = ""
+
+    dataset_path = "tests/evaluation_dataset.json"
+    with open(dataset_path, "w", encoding="utf-8") as f:
+        json.dump(samples, f, indent=2)
+
+    print(f"Created reproducible evaluation dataset with {len(samples)} samples at {dataset_path}")
+    print(f"Categories: {sum(1 for s in samples if s['category']=='email')} emails, {sum(1 for s in samples if s['category']=='article')} articles, {sum(1 for s in samples if s['category']=='txt')} txt files, {sum(1 for s in samples if s['category']=='pdf')} pdfs.")
+
+if __name__ == "__main__":
+    main()
+

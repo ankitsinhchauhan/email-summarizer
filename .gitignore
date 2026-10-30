@@ -1,9 +1,25 @@
+# Virtual Environment
 venv/
+.venv/
+env/
+
+# Python Cache
 __pycache__/
+*.py[cod]
+*$py.class
 *.pyc
-<<<<<<< HEAD
-.env
+
+# Pytest / Coverage
 .pytest_cache/
-=======
+.coverage
+htmlcov/
+
+# Environment Variables
 .env
->>>>>>> origin/main
+.env.local
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

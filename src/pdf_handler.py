@@ -151,7 +151,11 @@ def summarize_pdf_text(
     min_length: int,
     summarizer_func: Callable[[str, int, int], str]
 ) -> str:
-    """Chunk and summarize extracted PDF text with bounded chunking and reduction."""
+    """Chunk and summarize extracted PDF text across all pages.
+    
+    Ensures that decisions and directives appearing on later pages or chunks
+    are evaluated and included rather than ignored by early truncation.
+    """
     chunks = chunk_pdf_text(text, PDF_CHUNK_SIZE)
     if not chunks:
         return ""
@@ -159,37 +163,35 @@ def summarize_pdf_text(
     # Bound maximum chunks to prevent excessive CPU and memory use on multi-page PDFs
     chunks = chunks[:MAX_PDF_CHUNKS]
 
-    # Summarize the first chunk
-    first_summary = summarizer_func(chunks[0], max_length, min_length)
     if len(chunks) == 1:
-        return first_summary
+        return summarizer_func(chunks[0], max_length, min_length)
 
-    # For multi-chunk documents:
-    # If the first chunk's summary already contains at least 3 sentences and is not the "too short" placeholder,
-    # the rule-based summarizer reduction (.split(". ")[:3]) will only extract those first 3 sentences.
-    # We can return immediately, avoiding redundant chunk summarization and double processing.
-    sentences = first_summary.split(". ")
-    if len(sentences) >= 3 and first_summary != "Text is too short to summarize.":
-        return first_summary
-
+    # For multi-chunk documents, evaluate candidate summaries from all chunks
     chunk_summaries: List[str] = []
-    if first_summary and first_summary != "Text is too short to summarize.":
-        chunk_summaries.append(first_summary)
+    seen_sentences: set[str] = set()
 
-    for chunk in chunks[1:]:
+    for chunk in chunks:
+        # Extract candidate summary from each chunk
         c_sum = summarizer_func(chunk, max_length, min_length)
         if c_sum and c_sum != "Text is too short to summarize.":
-            chunk_summaries.append(c_sum)
-            combined_count = sum(len(s.split(". ")) for s in chunk_summaries)
-            if combined_count >= 3:
-                break
+            # Add unique sentences to avoid duplicate text between chunks
+            chunk_sents = [s.strip() for s in c_sum.split(". ") if s.strip()]
+            unique_sents = []
+            for s in chunk_sents:
+                s_key = s.lower()
+                if s_key not in seen_sentences:
+                    seen_sentences.add(s_key)
+                    unique_sents.append(s)
+            if unique_sents:
+                chunk_summaries.append(". ".join(unique_sents))
 
     if not chunk_summaries:
-        return first_summary or "Text is too short to summarize."
+        return summarizer_func(chunks[0], max_length, min_length)
 
     if len(chunk_summaries) == 1:
         return chunk_summaries[0]
 
-    combined_summary = " ".join(chunk_summaries)
-    return summarizer_func(combined_summary, max_length, min_length)
+    # Combine candidates from all chunks and rank globally
+    combined_candidates = " ".join(chunk_summaries)
+    return summarizer_func(combined_candidates, max_length, min_length)
 

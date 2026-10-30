@@ -15,28 +15,22 @@
         <button class="theme-toggle" id="themeToggle" type="button">🌙 Dark Mode</button>
       </div>
 
-<<<<<<< HEAD
       <h1>Email Summarizer</h1>
       <p>Paste text or upload a TXT or PDF document to generate an instant, concise summary.</p>
-=======
-      <h1>Smart Email Summarizer</h1>
-      <p>Paste text or upload a text file and generate a clean summary.</p>
->>>>>>> origin/main
     </section>
 
     <section class="layout">
       <div class="card">
-<<<<<<< HEAD
-        <nav class="tabs" aria-label="Input mode tabs">
-          <button class="tab active" id="textTab" type="button" aria-controls="textPanel" aria-selected="true">Text Input</button>
-          <button class="tab" id="txtTab" type="button" aria-controls="txtPanel" aria-selected="false">TXT Upload</button>
-          <button class="tab" id="pdfTab" type="button" aria-controls="pdfPanel" aria-selected="false">PDF Upload</button>
+        <nav class="tabs" role="tablist" aria-label="Input mode tabs">
+          <button class="tab active" id="textTab" role="tab" type="button" aria-controls="textPanel" aria-selected="true">Text Input</button>
+          <button class="tab" id="txtTab" role="tab" type="button" aria-controls="txtPanel" aria-selected="false">TXT Upload</button>
+          <button class="tab" id="pdfTab" role="tab" type="button" aria-controls="pdfPanel" aria-selected="false">PDF Upload</button>
         </nav>
 
         <!-- Panel 1: Text Input -->
-        <div id="textPanel">
+        <div id="textPanel" role="tabpanel" aria-labelledby="textTab">
           <h2 class="card__title card__title--spaced">Email or Article Text</h2>
-          <textarea id="inputText" placeholder="Paste your long email, report, or article here..."></textarea>
+          <textarea id="inputText" aria-label="Email or Article Text" placeholder="Paste your long email, report, or article here..."></textarea>
           <div class="meta">
             <span id="charCount">0 characters</span>
             <span>Minimum 200 characters recommended</span>
@@ -44,7 +38,7 @@
         </div>
 
         <!-- Panel 2: TXT Upload -->
-        <div id="txtPanel" class="hidden">
+        <div id="txtPanel" class="hidden" role="tabpanel" aria-labelledby="txtTab">
           <h2 class="card__title card__title--spaced">Upload Text File (.txt)</h2>
           <div class="file-upload-box">
             <label for="txtFileInput" class="custom-file-btn" id="txtFileBtn">Choose .TXT File</label>
@@ -58,7 +52,7 @@
         </div>
 
         <!-- Panel 3: PDF Upload -->
-        <div id="pdfPanel" class="hidden">
+        <div id="pdfPanel" class="hidden" role="tabpanel" aria-labelledby="pdfTab">
           <h2 class="card__title card__title--spaced">Upload PDF Document (.pdf)</h2>
           <div class="file-upload-box">
             <label for="pdfFileInput" class="custom-file-btn" id="pdfFileBtn">Choose .PDF File</label>
@@ -81,51 +75,10 @@
           <div>
             <label for="minLength">Min Length (words)</label>
             <input type="number" id="minLength" value="30" min="10" max="150" />
-=======
-        <div class="tabs">
-          <button class="tab active" id="textTab" type="button">Text Input</button>
-          <button class="tab" id="fileTab" type="button">File Upload</button>
-        </div>
-
-        <div id="textPanel">
-        <h2 class="card__title card__title--spaced">Email or Article Text</h2>
-
-          <!-- <label for="inputText">Email or Article Text</label> -->
-          <textarea id="inputText" placeholder="Paste your long email or article here..."></textarea>
-
-          <div class="meta">
-            <span id="charCount">0 characters</span>
-            <span>Minimum 300 characters recommended</span>
-          </div>
-        </div>
-
-        <div id="filePanel" class="hidden">
-         <h2 class="card__title card__title--spaced">Upload File</h2>
-          <div class="file-upload-box">
-            
-            <label for="fileInput" class="custom-file-btn">Select Text File</label>
-            <input type="file" id="fileInput" accept=".txt" class="file-input" />
-            <p class="file-info" id="fileInfo">No file selected</p>
-        </div>
-
-         
-        </div>
-
-        <div class="controls">
-          <div>
-            <label for="maxLength">Max Length</label>
-            <input type="number" id="maxLength" value="150" min="20" max="250" />
-          </div>
-
-          <div>
-            <label for="minLength">Min Length</label>
-            <input type="number" id="minLength" value="30" min="0" max="150" />
->>>>>>> origin/main
           </div>
         </div>
 
         <button class="btn" id="summarizeBtn" type="button">Generate Summary</button>
-<<<<<<< HEAD
         <p class="error" id="errorMessage" role="alert"></p>
       </div>
 
@@ -133,14 +86,6 @@
       <aside class="card">
         <h2 class="card__title">Summary</h2>
         <div class="spinner" id="spinner" aria-label="Processing summary"></div>
-=======
-        <p class="error" id="errorMessage"></p>
-      </div>
-
-      <aside class="card">
-        <h2 class="card__title">Summary</h2>
-        <div class="spinner" id="spinner"></div>
->>>>>>> origin/main
 
         <div class="summary" id="summaryBox">
           <p id="summaryResult" class="muted">Your generated summary will appear here.</p>
